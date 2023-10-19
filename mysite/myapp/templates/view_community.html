@@ -1,0 +1,43 @@
+{% extends 'base_user.html' %}
+
+
+{% block content %}
+
+    <div class="community-header">
+        <h1>{{ community.name }}</h1>
+        <button class="notification-btn">Notificaciones</button>
+        <button class="subscribe-btn">Inscribir</button>
+    </div>
+
+    <div class="community-links">
+        <button class="link-btn"><a href="#" target="_blank">ClinicalTrials.gov</a></button>
+        <button class="link-btn"><a href="#" target="_blank">Open Trials</a></button>
+        <button class="link-btn"><a href="#" target="_blank">Resources</a></button>
+    </div>
+
+    <div class="create-post">
+        <button class="link-btn"><a href="{% url 'create_post' community.id %}">Create Post</a>
+    </div>
+
+    {% for post in community.posts.all %}
+    <div class="post">
+        <h2>{{ post.title }}</h2>
+        <p>Publicado por: {{ post.user.username }}</p>
+        <p>{{ post.content }}</p>
+        <div class="post-actions">
+            <button>Me gusta</button>
+            <button>Guardar</button>
+            <button>Comentar</button>
+        </div>
+    </div>
+
+    {% endfor %}
+
+        {% for post in posts %}
+            <h2>{{ post.title }}</h2>
+            <p>{{ post.content }}</p>
+        {% endfor %}
+
+{% endblock %}
+
+

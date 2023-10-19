@@ -1,0 +1,37 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Page</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <!-- Aquí puedes agregar tu logo, como un <img> -->
+            <p>Logo</p>
+        </div>
+        <div class="search-bar">
+            <input type="text" placeholder="Search">
+            <button>Search</button>
+        </div>
+        <div class="auth-buttons">
+            <button><a href="{% url 'login' %}">Login</a></button>
+            <button><a href="{% url 'register' %}">Sign Up</a></button>
+        </div>
+    </header>
+
+    <main>
+        <div class="main-image">
+            <img src="path/to/your/image.jpg" alt="Main Image">
+        </div>
+    </main>
+
+</body>
+</html>

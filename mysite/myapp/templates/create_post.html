@@ -1,0 +1,26 @@
+{% extends 'base_user.html' %}
+
+{% block content %}
+
+<form method="post" action="{% url 'create_post' community.id %}">
+    {% csrf_token %}
+    
+    <div class="post-options">
+        <button type="button">Multimedia</button>
+        <button type="button">Enlace</button>
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.title.id_for_label }}">Título:</label>
+        {{ form.title }}
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.content.id_for_label }}">Texto (opcional):</label>
+        {{ form.content }}
+    </div>
+
+    <button type="submit">Publicar</button>
+</form>
+
+{% endblock %}

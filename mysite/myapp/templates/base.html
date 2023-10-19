@@ -1,0 +1,27 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Mi sitio{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <header>
+        <!-- Aquí puedes colocar el encabezado de tu sitio, como el logo y la barra de navegación -->
+    </header>
+
+    <main>
+        {% block content %}
+        <!-- El contenido específico de cada página se insertará aquí -->
+        {% endblock %}
+    </main>
+
+    <footer>
+        <!-- Aquí puedes colocar el pie de página de tu sitio, como información de contacto o enlaces a redes sociales -->
+    </footer>
+
+    <!-- Opcional: aquí podrías agregar scripts de JavaScript que se utilicen en todo el sitio -->
+</body>
+</html>

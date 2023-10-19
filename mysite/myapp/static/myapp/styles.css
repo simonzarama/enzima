@@ -1,0 +1,40 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.custom-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #565484;  /* Cambia este color al que prefieras */
+}
+
+.custom-logo, .custom-nav-links a {
+  color: rgb(234, 127, 127);
+  margin-right: 15px; /* Ajusta como prefieras */
+}
+
+.custom-search {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.custom-nav-links {
+  display: flex;
+  align-items: center; /* Alinea los elementos verticalmente al centro */
+  justify-content: space-between; /* Espacia los elementos uniformemente */
+}
+
+.custom-search-input {
+  width: 800px; /* Ancho personalizado de la barra de búsqueda */
+  padding: 5px;
+}
+
+.custom-search-btn {
+  margin-left: 10px;
+  padding: 5px 15px;
+}

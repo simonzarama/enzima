@@ -1,0 +1,16 @@
+{% extends 'base_user.html' %}
+
+
+{% block content %}
+<h1>Bienvenido a tu página de inicio</h1>
+<p>¡Hola, {{ request.user.username }}! Aquí puedes ver tu información y actividades.</p>
+
+<div class="community-section">
+    <div class="community-button">
+        <a href="{% url 'explore' %}">EXPLORE</a>
+    </div>
+    <div class="community-button">
+        <a href="{% url 'create_community' %}">CREATE COMMUNITY</a>
+    </div>
+</div>
+{% endblock %}
