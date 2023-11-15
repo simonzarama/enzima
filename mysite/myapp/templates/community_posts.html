@@ -1,0 +1,761 @@
+
+
+<head>
+    
+{% load static %}
+{% load custom_filters %}
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+<meta name="csrf-token" content="{{ csrf_token }}">
+    <!-- Más etiquetas y recursos -->
+</head>
+
+
+
+
+{% block content %}
+
+<br>
+<br>
+
+
+<div class="center-content">
+    <div class="community-button special-button">
+        <a href="{% url 'create_post' community.id %}">Create Post</a>
+    </div>
+</div>
+<br>
+<br>
+
+
+
+
+
+<div class="centrar-contenido">
+
+    {% if post_count > 0 %}
+    <div class="ordenamiento">
+        <a href="?order=-published_at" class="btn {% if request.GET.order == '-published_at' or request.GET.order == None %}selected{% endif %}">New Comments</a>
+        <a href="?order=-likes_count" class="btn {% if request.GET.order == '-likes_count' %}selected{% endif %}">Popular Comments</a>
+        
+    </div>
+    {% endif %}
+
+
+    <br>
+    <br>
+
+    {% for post in posts %}
+    <article class="post">
+        <div class="author-info"> <!-- Contenedor para la información del autor y la comunidad -->
+            Published by:
+            <a href="{% url 'profile' post.user.username %}" class="link-blanco">{{ post.user.username }}</a>
+            on
+            <a href="{% url 'view_community' post.community.name %}" class="link-blanco">{{ post.community.name }}</a>
+        </div>
+        
+        <div class="content-box"> <!-- Contenedor para el contenido del post -->
+            <a href="{% url 'post_detail' post.id %}" class="post-link">
+                <h3 id="post-title-{{ post.id }}">{{ post.title }}</h3>
+                
+                {% if post.media_file %}
+                    {% if post.media_file.url|lower|endswith:".mp4" or post.media_file.url|lower|endswith:".webm" %}
+                        <video controls id="post-file-{{ post.id }}">
+                            <source src="{{ post.media_file.url }}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    {% else %}
+                        <img src="{{ post.media_file.url }}" alt="Media file" class="media-thumbnail" id="post-file-{{ post.id }}">
+                    {% endif %}
+                {% endif %}
+                
+                <p id="post-content-{{ post.id }}"> {{ post.content|linebreaks }} </p>
+            </a>
+        </div>
+
+        <div class="post-separator"></div>
+            <div class="post-actions">
+                <p class="comment-count">{{ post.comments.count }} Comment{{ post.comments.count|pluralize }}</p>
+        <!-- Botón de Like -->
+                    <a href="#" data-post-id="{{ post.id }}" class="like-button post-like-button">
+                        {% if post.is_liked %}
+                            Unlike
+                        {% else %}
+                            Like
+                        {% endif %}
+                    </a> 
+                    <span id="like-count-{{ post.id }}">{{ post.likes_count }} Like{{ post.likes_count|pluralize }}</span>
+                    <button data-post-id="{{ post.id }}" class="save-btn">
+                        {% if post.id in saved_post_ids %}
+                            Unsave
+                        {% else %}
+                            Save
+                        {% endif %}
+                    </button>
+                    
+                {% if request.user == post.user %}
+                <div class="more-options-container">
+                    <button class="more-options-button" data-post-id="{{ post.id }}" id="more-options-btn-{{ post.id }}">More Options</button>
+                    <div class="options-container" id="options-container-{{ post.id }}" style="display:none;">
+                        <button class="edit-button" data-post-id="{{ post.id }}">Edit</button>
+                        <button class="delete-button" data-post-id="{{ post.id }}">Delete</button>
+                    </div>
+                </div>
+            {% endif %}
+            </div>
+        </article>
+    {% endfor %}
+</div>
+
+<div id="delete-confirmation" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+    <p>Are you sure you want to delete this?</p>
+    <div id="button-container" style="display: flex; justify-content: space-around;">
+        <button id="cancel-button" class="cancel-button">Cancel</button>
+        <button id="confirm-delete-button" class="btn delete-button">Delete</button>
+    </div>
+</div>
+<div id="edit-post-container" class="edit-post-container" style="display:none; border: 1px solid black;">
+    <form id="edit-post-form" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="edit-title">Title:</label>
+            <input type="text" id="edit-title" name="title" required="" style="border: 1px solid black;">
+        </div>
+        <div class="form-group">
+            <label for="edit-content">Text:</label>
+            <textarea id="edit-content" name="content" style="border: 1px solid black; width: 800px; min-height: 300px;">{{ post.content }}</textarea>
+        </div>
+        <div class="form-group">
+            <label for="edit-file-input">Attach file:</label>
+            <input type="file" id="edit-file-input" name="media_file" multiple accept="image/*,video/*">
+            <div id="current-file"></div> 
+            <input type="checkbox" id="remove-media-file" name="remove_media_file" value="true">
+            <label for="remove-media-file">Delete File</label>
+        </div>
+        <div class="edit-buttons-container">
+            <button type="submit" class="save-button">Save Changes</button>
+            <button type="button" id="cancel-edit-button" class="cancel-button">Cancel</button>
+        </div>
+        
+    </form>
+</div>
+
+<script>
+$(document).ready(function() {
+    console.log("Script dinámico cargado (posts)")
+
+/* SECCION DE VISTA PREVIA PARA EL CONTENIDO MULTIMEDIA EN EDICION. */
+
+const fileInput = $('#edit-file-input');
+const filePreview = $('#current-file');
+
+if (fileInput.length) {
+    fileInput.change(function(e) {
+        filePreview.empty();  // Limpiar la vista previa anterior
+        const files = e.target.files;
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (file.type.startsWith('image/')) {
+                    const img = $('<img>', {
+                        src: e.target.result,
+                        alt: file.name,
+                        class: 'preview-image'
+                    });
+                    filePreview.append(img);
+                } else {
+                    const div = $('<div>').text(file.name);
+                    filePreview.append(div);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+$(document).on('click', '.post-like-button', function(e) {
+    e.preventDefault(); // Evita que el navegador siga el enlace
+
+    // Cambia el texto del botón inmediatamente al hacer clic en él
+    var currentText = $(this).text().trim();
+    if (currentText == "Like") {
+        $(this).text("Unlike");
+    } else {
+        $(this).text("Like");
+    }
+
+    // Captura el botón para su uso posterior
+    var buttonClicked = $(this);
+    var postId = $(this).data('post-id');
+    
+    console.log("Realizando petición AJAX para el post con ID:", postId);
+
+    $.ajax({
+        url: '/like_post/' + postId + '/',
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': $('input[name="csrfmiddlewaretoken"]').val()
+        },
+        data: {
+            'post_id': postId
+        },
+        success: function(response) {
+            console.log("Respuesta del servidor:", response);
+
+            if (response.success) {
+                var likesCount = response.likes_count;
+                $('#like-count-' + postId).text(likesCount + (likesCount == 1 ? ' Like' : ' Likes'));
+
+                console.log("Actualizando el texto del botón...");
+
+                // Actualiza el texto del botón basado en la respuesta
+                if (response.is_liked) {
+                    buttonClicked.text('Unlike');
+                } else {
+                    buttonClicked.text('Like');
+                }
+
+                console.log("Texto del botón después de la actualización:", buttonClicked.text());
+            }
+        }
+    });
+});
+
+
+console.log("Inicio de save");
+
+$(document).on('click', '.save-btn', function() {
+    const button = $(this); // Referencia al botón que fue clickeado
+    const postId = button.data("post-id");
+    const csrfToken = $("meta[name='csrf-token']").attr("content"); // Obtener el token CSRF de la meta etiqueta
+
+    $.ajax({
+        url: `/post/${postId}/save/`,
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken, // Usar el token CSRF
+        },
+        success: function(data) {
+            console.log(data); // <-- Esta es la línea que agregamos para imprimir la respuesta en la consola
+
+            if (data.saved) {
+                button.text("Unsave");
+            } else {
+                button.text("Save");
+            }
+        }
+    });
+});
+
+console.log("Inicio de more options");
+$(document).on('click', '.more-options-button', function(event) {
+    event.stopPropagation();
+    const postId = $(this).data("post-id");
+    const optionsContainer = $('#options-container-' + postId);
+    optionsContainer.toggle();
+});
+
+$(document).click(function(event) {
+    $('.more-options-button').each(function() {
+        const postId = $(this).data("post-id");
+        const $optionsContainer = $('#options-container-' + postId);
+        const isClickInside = $optionsContainer.is(event.target) || $optionsContainer.has(event.target).length !== 0;
+
+        if (!isClickInside && $optionsContainer.is(':visible')) {
+            $optionsContainer.hide();
+        }
+    });
+});
+
+
+console.log("Inicio de delete");
+$(document).on('click', '.delete-button', function() {
+    const postId = $(this).data("post-id");
+    $('#delete-confirmation').data('post-id', postId).show();
+});
+
+$(document).on('click', '#cancel-button', function() {
+    $('#delete-confirmation').hide();
+});
+
+$(document).on('click', '#confirm-delete-button', function() {
+    const postId = $('#delete-confirmation').data('post-id');
+    $('#delete-confirmation').hide();
+
+    $.ajax({
+        url: "{% url 'delete_post' 9999 %}".replace(9999, postId),
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        success: function() {
+            location.reload();
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.error('Error:', errorThrown);
+        }
+    });
+});
+console.log("Inicio de edit");
+$(document).on('click', '.edit-button', function() {
+    console.log("Botón clickeado: ", this);
+    const postId = $(this).data("post-id");
+    console.log("postId: ", postId); // Esto imprimirá el valor de postId en la consola
+
+    // Verificar si postId es undefined o no
+    if (typeof postId === 'undefined') {  // Se cambió aquí a '===' para comprobar la igualdad estricta
+        // Si postId es undefined, maneja el error adecuadamente
+        console.error('postId is undefined. Button data:', $(this).data());
+    } else {
+        // Si postId no es undefined, ejecuta la llamada AJAX
+        $.ajax({
+            url: `/get_post_data/${postId}/`,
+            method: 'GET',
+            success: function(response) {
+                $('#edit-title').val(response.title);
+                $('#edit-content').val(response.content);
+                $('#edit-post-container').data('post-id', postId).show();
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error:', errorThrown);
+            }
+        });
+    }
+});
+
+
+
+$(document).on('click', '#cancel-edit-button', function() {
+    $('#edit-post-container').hide();
+});
+
+
+console.log("Inicio de editform");
+$(document).on('submit', '#edit-post-form', function(e) {
+    e.preventDefault();
+    const postId = $('#edit-post-container').data('post-id');
+    const newTitle = $('#edit-title').val();
+    const newContent = $('#edit-content').val();
+    const mediaFile = $('#edit-file-input')[0].files[0];
+
+    const formData = new FormData();
+    formData.append('title', newTitle);
+    formData.append('content', newContent);
+    if (mediaFile) {
+        formData.append('media_file', mediaFile);
+    }
+
+    if ($('#remove-media-file').prop('checked')) {
+        formData.append('remove_media_file', 'true');
+    }
+
+    $.ajax({
+        url: `/post/${postId}/edit/`,
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                $('#post-title-' + postId).text(response.title);
+                $('#post-container-' + postId).html('<div id="post-content-' + postId + '">' + response.content.replace(/\n/g, '<br>') + '</div>');
+                if (response.media_url) {
+                    let mediaElement;
+                    if (response.media_url.toLowerCase().endsWith('.mp4')) {
+                        mediaElement = `<video controls><source src="${response.media_url}" type="video/mp4">Your browser does not support the video tag.</video>`;
+                    } else {
+                        mediaElement = `<img src="${response.media_url}" alt="Media file" class="media-thumbnail">`;
+                    }
+                    $('#post-file-' + postId).replaceWith(mediaElement);
+                } else {
+                    $('#post-file-' + postId).replaceWith('');
+                }
+                $('#edit-post-container').hide();
+                location.reload();
+            } else {
+                console.error('Error del servidor:', response.error);
+            }
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.error('Error:', errorThrown);
+        }
+    });
+});
+
+});
+
+
+</script>
+
+
+<style>
+
+
+
+    .ordenamiento a.btn {
+        display: inline-block;
+        /* Añadir márgenes si quieres espacio entre ellos */
+        margin-right: 10px;
+    }
+    
+    .center-content {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%; /* Ajusta según necesites. Si no quieres que tome todo el alto, puedes quitar esta línea o ajustar el valor. */
+    }
+    
+    .center-content .community-button {
+        display: flex;
+        align-items: baseline;  /* Esto centrará verticalmente el contenido dentro */
+        justify-content: center; /* Esto centrará horizontalmente el contenido dentro */
+        border: none;  /* Intento de eliminar el borde, pero puede que no funcione en un div. Es más relevante para elementos <a> y <button>. */
+        border-radius: 0; 
+        background-color: rgb(234, 216, 127);
+        color: #000000;
+        cursor: pointer;
+    }
+    
+    /* Aumento la especificidad para el elemento <a> dentro de .community-button */
+    .center-content .community-button.special-button a {
+        position: relative;
+        top: 5px; 
+        width: calc((200px * 2) + 20px);
+        color: black; /* Color de letra negro */
+        text-decoration: none; /* Quitar el subrayado, común en enlaces */
+        padding: 10px 0px; /* Añade padding para que el enlace parezca un botón */
+        line-height: -2; /* Ajusta según sea necesario */
+        display: block; /* Hacer que el enlace ocupe todo el espacio del contenedor .community-button */
+        border: none;  /* Elimina el borde */
+        border-radius: 0; /* Hace que los bordes no estén redondeados */
+        background-color: inherit; /* Heredar el color de fondo del padre para que parezca un botón */
+    }
+    
+    
+    /* Estilos para la información del autor y comunidad */
+    .author-info {
+        display: flex; 
+        justify-content: space-between; 
+    }
+    
+    /* Estilos para el cuadro que rodea el contenido */
+    .content-box {
+        border: 1px solid white;
+        background-color: transparent;
+        padding: 10px; 
+    }
+    
+    /* Estilos para el botón Like */
+    .like-button {
+        width: 50px;
+        /* ... cualquier otro estilo que desees agregar ... */
+    }
+    
+    .results-container a {
+    width: auto;
+    border: none;
+    }
+    
+    .centrar-contenido .post-actions button, .centrar-contenido .post-actions .like-button {
+    border-radius: 0%;
+    }
+    
+    .results-container a:hover {
+    background: none;
+    color: white
+    }
+    
+    .author-info {
+        /* Resetear margen y relleno */
+        margin: 0;
+        padding: 0;
+        /* Establecer el contenedor para que se muestre en línea */
+        display: block;
+        /* Alineación a la izquierda */
+        text-align: left;
+        margin-bottom: 20px;
+        
+    }
+    
+    .author-info a.link-blanco {
+        /* Restablece la apariencia a la de un enlace normal */
+        background-color: transparent;
+        border: none;
+        padding: 0;
+        border-radius: 0;
+        text-decoration: none; /* Remover el subrayado (si es que lo tienen) */
+        display: inline; /* Asegura que se comporten como enlaces en línea */
+    
+        /* Establecer una línea inferior permanente de color blanco */
+        border-bottom: 2px solid white;
+    
+        /* Agregar un margen debajo del enlace */
+        margin-bottom: 30px;
+    
+        /* Estilo de fuente */
+        font-weight: normal; /* Asegúrate de que no esté en negrita, a menos que lo desees */
+        color: inherit; /* Usa el color heredado o define uno específico si lo prefieres */
+    }
+    
+    /* Agregar un borde blanco a ambos botones */
+    .ordenamiento a.btn {
+        display: inline-block;
+        margin-right: 10px;
+        border: 1px solid white;
+        /* Otras propiedades si las necesitas... */
+    }
+    
+    /* Si el botón está seleccionado, modificar el borde (si es necesario) */
+    .ordenamiento a.btn.selected {
+        border: 1px  rgb(234, 216, 127); /* O puedes cambiarlo a otro estilo si lo prefieres */
+       
+    }
+    
+    </style>
+    
+    
+
+
+<style>
+
+    .post-link, .post-link:hover {
+        text-decoration: none;
+        color: inherit;
+        background-color: inherit;
+    }
+    
+    .post-link h3, .post-link p, .post-link img {
+        color: inherit;
+        text-decoration: none;
+    }
+    
+    .post-link:hover h3, .post-link:hover p, .post-link:hover img {
+        color: inherit;
+        text-decoration: none;
+    }
+    
+    
+    .edit-buttons-container {
+        display: flex;
+        justify-content: space-between; /* Esto separará los botones */
+        width: 100%; /* O un ancho específico si lo prefieres */
+        padding: 10px; /* Añade padding si es necesario */
+    }
+    
+    .save-button {
+        color: white;
+        padding: 10px 20px;
+        background-color: rgb(234, 127, 127);
+        text-decoration: none;
+        border: none;
+        border-radius: 25px;
+        border: 1px solid #ffffff;
+        margin-bottom: 2px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.2s, color 0.2s;
+        width: 150px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .save-button:hover {
+        background-color: rgb(234, 127, 127);
+        color: #000000;
+    }
+    
+    
+    .cancel-button {
+        color: white;
+        background-color: #000000;
+        padding: 10px 20px;
+        text-decoration: none;
+        border: none;
+        border-radius: 25px;
+        border: 1px solid #ffffff;
+        margin-bottom: 2px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.2s, color 0.2s;
+        width: 100px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .cancel-button:hover {
+        background-color: rgb(255, 255, 255);
+        color: #000000;
+        border: 1px solid #000000;
+    }
+    
+    
+        .btn {
+            /* Suponiendo un fondo oscuro, pero puedes cambiarlo según tu diseño */
+            color: white;
+            padding: 5px 10px;
+            text-decoration: none;
+            border: none;
+            border-radius: 25px;
+            border: 1px solid #ffffff;
+            margin-bottom: 2px;
+        }
+    
+        .btn:hover,
+        .btn.selected {
+            background-color: rgb(234, 216, 127);
+            color: #000000; /* Cambia el color del texto al pasar el mouse sobre él a un blanco apagado */
+            text-decoration: none; /* Esto quita el subrayado al pasar el mouse */
+        }
+    
+    
+    .link-blanco {
+        color: white;
+        text-decoration: none; /* Opcional: esto eliminará el subrayado */
+    }
+    .link-blanco:hover {
+        color: white; /* Esto mantendrá el color blanco incluso cuando se pasa el cursor sobre el enlace */
+        text-decoration: underline; /* Opcional: esto subrayará el enlace al pasar el cursor */
+    }
+    
+    
+    .preview-image {
+        max-width: 100px;
+    }
+    
+    .centrar-contenido {
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center;
+        width: 100%;
+        margin-bottom: 20px;  /* Esto añadirá espacio debajo de cada post */
+        margin-top: 20px;  
+    }
+    
+    .centrar-contenido .post {
+        background-color: #808080; 
+        padding: 20px;
+        border: 1px solid white; 
+        border-radius: 5px; 
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); 
+        width: calc((400px * 2) + 20px);
+        box-sizing: border-box;
+        margin-bottom: 50px;
+    }
+    
+    .centrar-contenido .post-separator {
+        border-bottom: 1px solid white; /* línea blanca que separa el contenido de las acciones */
+        margin: 10px 0; /* espacio arriba y abajo de la línea */
+    }
+    .centrar-contenido .post-actions {
+        position: relative;
+    }
+    .centrar-contenido .post-actions button,
+    .centrar-contenido .post-actions .like-button {
+        display: inline-block; 
+        margin: 0 10px; 
+        padding: 10px 20px;
+        background-color:  rgb(234, 216, 127); 
+        color: #000000; 
+        border: 1px solid white; 
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .centrar-contenido .post-actions button:hover,
+    .centrar-contenido .post-actions .like-button:hover {
+        background-color: rgb(234, 127, 127); 
+    }
+    
+    
+    
+    .centrar-contenido .post-actions .more-options-button {
+        display: inline-block;
+        margin: 0 10px;
+        padding: 10px 20px;
+        background-color: rgb(234, 216, 127);
+        color: #000000;
+        border: 1px solid white;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .centrar-contenido .post-actions .more-options-button:hover {
+        background-color: rgb(234, 127, 127);
+    }
+    
+    /* ... (tu CSS existente) ... */
+    
+    .more-options-container {
+        position: relative;
+        display: inline-block;
+    }
+    
+    
+    .options-container {
+        position: absolute;
+        width: 144px;
+        top: 100%;
+        left: 50;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        background-color: #808080; 
+        border: 1px solid #ccc;
+        padding: 10px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        transform: translateX(10px);
+    }
+    
+    .edit-button, .delete-button {
+        padding: 10px 20px;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .edit-button {
+        background-color: rgb(234, 216, 127);
+    }
+    
+    .delete-button {
+        background-color: rgb(234, 127, 127);
+    }
+    
+    .edit-button:hover, .delete-button:hover {
+        background-color: rgb(234, 127, 127);
+    }
+    
+    .media-thumbnail {
+        width: 200px;
+        height: auto;
+    }
+    
+    .edit-post-container {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 20px;
+        border: 1px solid #ccc;
+        z-index: 1000;  /* para asegurarse de que aparezca en la parte superior*/
+    }
+    
+    
+    </style>
+    
+
+    
+    {% endblock %}
+    
+
+
+

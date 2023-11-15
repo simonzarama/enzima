@@ -1,0 +1,542 @@
+
+<head>
+    
+    {% load static %}
+    {% load custom_filters %}
+    <link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+    </head>
+
+
+
+{% block content %}
+
+
+<div class="centrar-contenido">
+
+    {% for resource in resources %}
+<article class="hr-post">
+    <div class="hr-author-info">
+        Published by:
+        <a href="{% url 'profile' resource.creator.username %}" class="hr-link-blanco">{{ resource.creator.username }}</a>
+        {% if campaign.communities.all %}
+                on
+                {% for community in campaign.communities.all %}
+                    <a href="{% url 'view_community' community.name %}" class="hc-link-blanco">{{ community.name }}</a>
+                    {% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            {% endif %}
+    </div>
+    
+    <div class="hr-content-box">
+        <a href="{% url 'view_resource_detail' resource.id %}" class="hr-post-link">
+            <h3 id="resource-title-{{ resource.id }}">{{ resource.title }}</h3>
+            <p>{{ resource.description|linebreaks }}</p>
+
+            {% if resource.media_file %}
+                {% if resource.media_file.url|lower|endswith:".mp4" or resource.media_file.url|lower|endswith:".webm" %}
+                    <video controls id="resource-file-{{ resource.id }}">
+                        <source src="{{ resource.media_file.url }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                {% elif resource.media_file.url|lower|endswith:".pdf" %}
+                    <!-- Opción con enlace -->
+                    <a href="{{ resource.media_file.url }}" target="_blank">Ver PDF</a>
+
+                    <!-- Opción con iframe para visualizar PDF incrustado (puedes elegir uno de los dos) -->
+                    <!--<iframe src="{{ resource.media_file.url }}" width="600" height="400"></iframe>-->
+                {% else %}
+                    <img src="{{ resource.media_file.url }}" alt="Media file" class="hr-media-thumbnail" id="resource-file-{{ resource.id }}">
+                {% endif %}
+            {% endif %}
+
+        </a>
+    </div>
+
+    <div class="hr-post-separator"></div>
+
+    <div class="hr-post-actions">
+        <!-- Contador de comentarios -->
+        <p class="hr-comment-count">{{ resource.comments.count }} Comment{{ resource.comments.count|pluralize }}</p>
+        
+        <!-- Botón de Like -->
+        <a href="#" data-resource-id="{{ resource.id }}" class="hr-like-button resource-like-button">
+            {% if resource.is_liked %}
+                Unlike
+            {% else %}
+                Like
+            {% endif %}
+        </a>
+        <span id="like-count-{{ resource.id }}">{{ resource.likes_count }} Like{{ resource.likes_count|pluralize }}</span>
+        
+        <!-- Botón de Guardar -->
+        <button data-resource-id="{{ resource.id }}" class="hr-save-btn">
+            {{ resource.is_saved|yesno:"Unsave,Save" }}
+        </button>
+        <!-- Opciones de más si el usuario es el creador del recurso -->
+        {% if request.user == resource.creator %}
+    <div class="hr-more-options-container">
+        <!-- Cambia el nombre del botón "More Options" para incluir el ID del recurso -->
+        <button class="hr-more-options-button" data-resource-id="{{ resource.id }}" id="hr-more-options-btn-{{ resource.id }}">More Options</button>
+        <a href="{{ resource.media_file.url }}" download="{{ resource.title|slugify }}" class="hr-download-button" id="hr-download-btn-{{ resource.id }}">Download</a>
+        <div class="hr-options-container" id="hr-options-container-{{ resource.id }}" style="display:none;">
+            <!-- Cambia el nombre del botón "Edit" para incluir el ID del recurso -->
+            <button class="hr-editar-resource" data-resource-id="{{ resource.id }}" id="hr-edit-btn-{{ resource.id }}">Edit</button>
+            <!-- Cambia el nombre del botón "Delete" para incluir el ID del recurso -->
+            <button class="hr-eliminar-resource" data-resource-id="{{ resource.id }}" data-url-base="{% url 'delete_resource' 0 %}" id="hr-delete-btn-{{ resource.id }}">Delete</button>
+        </div>
+    </div>
+{% endif %}
+</article>
+<br>
+<br>
+
+<div id="hr-delete-confirmation-{{ resource.id }}" class="hr-delete-confirmation" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+    <p>Are you sure you want to delete this resource?</p>
+    <div class="hr-button-container" style="display: flex; justify-content: space-around;">
+        <button class="hr-cancelar-eliminar" data-resource-id="{{ resource.id }}" data-dismiss="hr-delete-confirmation-{{ resource.id }}">Cancel</button>
+        <button class="hr-confirmar-eliminar hr-btn hr-eliminar-resource" data-resource-id="{{ resource.id }}">Delete</button>
+    </div>
+</div>
+
+<div id="edit-resource-container-{{ resource.id }}" class="hr-edit-resource-container" style="display:none; border: 1px solid black;">
+    <form id="edit-resource-form-{{ resource.id }}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="hr-form-group">
+            <label for="edit-title-{{ resource.id }}">Title:</label>
+            <input type="text" id="edit-title-{{ resource.id }}" name="title" required="" value="{{ resource.title }}" style="border: 1px solid black;">
+        </div>
+        <div class="hr-form-group">
+            <label for="edit-description-{{ resource.id }}">Description:</label>
+            <textarea id="edit-description-{{ resource.id }}" name="description" style="border: 1px solid black; width: 800px; min-height: 300px;">{{ resource.description }}</textarea>
+        </div>
+        <div class="hr-form-group">
+            <label for="edit-file-input-{{ resource.id }}">Attach file:</label>
+            <input type="file" id="edit-file-input-{{ resource.id }}" name="media_file" multiple accept="image/*,video/*">
+            <div id="current-file-{{ resource.id }}">
+                {% if current_media_filename %}
+                    Current File: {{ current_media_filename }}
+                {% endif %}
+            </div>
+            <input type="checkbox" id="remove-media-file-{{ resource.id }}" name="remove_media_file" value="true">
+            <label for="remove-media-file-{{ resource.id }}">Delete File</label>
+        </div>
+        <div class="hr-form-group">
+            <label for="edit-tags-{{ resource.id }}">Tags:</label>
+            <select id="edit-tags-{{ resource.id }}" name="tags[]" multiple> <!-- Aquí se realiza el cambio -->
+                {% for community in Community.objects.all %}
+                    <option value="{{ community.id }}" {% if community in resource.tags.all %}selected{% endif %}>{{ community.name }}</option>
+                {% endfor %}
+            </select>
+        </div>   
+        <div class="hr-edit-buttons-container">
+            <button type="submit" class="hr-save-changes-button">Save Changes</button>
+            <button type="button" class="hr-cancel-edit-resource-button hr-cancel-button" data-dismiss="edit-resource-container-{{ resource.id }}">Cancel</button>
+        </div>
+    </form>
+</div>
+
+    {% empty %}
+        <p>No hay recursos etiquetados en esta comunidad aún.</p>
+    {% endfor %}
+
+</div>
+
+
+<script>
+
+// LIKE
+
+console.log("Script dinámico cargado (resources)");
+
+$(document).on('click', '.hr-like-button', function(e) {
+    e.preventDefault(); // Evita que el navegador siga el enlace
+
+    // Captura el botón para su uso posterior
+    var buttonClicked = $(this);
+    var resourceId = buttonClicked.attr('data-resource-id'); // Usamos attr para ser consistentes
+
+    console.log("Realizando petición AJAX para el recurso con ID:", resourceId);
+
+    $.ajax({
+        url: '/like_resource/' + resourceId + '/',
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': $('input[name="csrfmiddlewaretoken"]').val() // Asegúrate de tener este input en tu HTML
+        },
+        data: {
+            'resource_id': resourceId // Puede que esta línea no sea necesaria si no usas 'resource_id' en el servidor
+        },
+        success: function(response) {
+            console.log("Respuesta del servidor:", response);
+
+            // Lógica para cambiar el texto del botón y el contador de likes
+            var newText = response.is_liked ? 'Unlike' : 'Like'; // Cambia el texto según el estado del "like"
+            buttonClicked.text(newText);
+
+            var likesCount = response.likes_count;
+            $('#like-count-' + resourceId).text(likesCount + " Like" + (likesCount !== 1 ? 's' : '')); // Manejo correcto del plural
+        }
+    });
+});
+
+
+//SAVE
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('hr-save-btn')) {
+        const button = e.target;
+        const resourceId = button.getAttribute('data-resource-id');
+        const csrfToken = document.querySelector("input[name='csrfmiddlewaretoken']").value;
+
+        console.log(resourceId);
+
+        // Asegúrate de que la URL aquí coincida con la que tu servidor Django espera
+        fetch(`/resource/${resourceId}/save/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log(data);
+            button.textContent = data.saved ? "Unsave" : "Save";
+            // Puedes querer actualizar algún otro elemento del DOM para reflejar el cambio
+        })
+        .catch(error => {
+            console.log(error);
+        });
+    }
+});
+
+
+// MORE OPTIONS
+
+
+// Manejo del clic en el botón "More Options" para recursos
+$(document).on('click', '.hr-more-options-button', function(event) {
+    event.stopPropagation(); // Previene que el evento se propague a elementos padres
+    const resourceId = $(this).data("resource-id"); // Obtiene el ID del recurso
+    const optionsContainer = $('#hr-options-container-' + resourceId); // Encuentra el contenedor de opciones correspondiente
+    optionsContainer.toggle(); // Muestra u oculta el contenedor de opciones
+});
+
+// Clic en cualquier lugar fuera de los contenedores de opciones los oculta
+$(document).click(function(event) {
+    $('.hr-options-container').each(function() {
+        const isClickInside = $(this).is(event.target) || $(this).has(event.target).length !== 0;
+
+        if (!isClickInside && $(this).is(':visible')) {
+            $(this).hide(); // Oculta el contenedor si se clickea fuera
+        }
+    });
+});
+
+// Prevenir que el clic dentro del contenedor de opciones se propague
+$(document).on('click', '.hr-options-container', function(event) {
+    event.stopPropagation();
+});
+
+
+//DELETE
+
+
+// Activar la ventana de confirmación de eliminación para recursos
+$(document).on('click', '.hr-eliminar-resource', function() {
+    const resourceId = $(this).data('resource-id');
+    $('#hr-delete-confirmation-' + resourceId).show();
+});
+
+// Ocultar la ventana de confirmación cuando se hace clic en "Cancel" para recursos
+$(document).on('click', '.hr-cancelar-eliminar', function() {
+    const resourceId = $(this).data('resource-id');
+    $('#hr-delete-confirmation-' + resourceId).hide();
+});
+
+// Manejar la eliminación cuando se hace clic en "Delete" para recursos
+$(document).on('click', '.hr-confirmar-eliminar', function() {
+    const resourceId = $(this).data('resource-id');
+    deleteResource(resourceId);
+});
+
+function deleteResource(resourceId) {
+    // Confirmar una vez más que el usuario desea eliminar
+    if (!confirm('Are you sure you want to delete this resource?')) return;
+
+    // Llamada AJAX para eliminar el recurso
+    $.ajax({
+        url: '/resource/' + resourceId + '/delete/', // La ruta debe coincidir con la configuración de URL de Django
+        type: 'POST',
+        data: {
+            'csrfmiddlewaretoken': '{{ csrf_token }}', // El token debe pasarse correctamente desde tu plantilla
+            'resource_id': resourceId
+        },
+        success: function(response) {
+            // Manejar la respuesta exitosa
+            $('#hr-delete-confirmation-' + resourceId).hide();
+            $('#resource-container-' + resourceId).remove();
+            // Opcional: manejar la eliminación en el frontend sin recargar
+             location.reload();
+        },
+        error: function(error) {
+            // Manejar el error
+            console.error('There was an error deleting the resource:', error);
+        }
+    });
+}
+
+
+//EDIT
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM fully loaded and parsed");
+
+    // Escucha clics en el documento
+    document.addEventListener('click', function(event) {
+        // Acción para el botón de editar
+        if (event.target && event.target.classList.contains('hr-editar-resource')) {
+            console.log("Edit button clicked:", event.target);
+
+            const resourceId = event.target.getAttribute('data-resource-id');
+            console.log("Resource ID retrieved:", resourceId);
+
+            if (typeof resourceId === 'undefined' || resourceId === null) {
+                console.error('Resource ID is undefined or null. Button data:', event.target.dataset);
+            } else {
+                // IDs de los elementos de edición
+                const titleInputId = 'edit-title-' + resourceId;
+                const descriptionInputId = 'edit-description-' + resourceId;
+                const resourceContainerId = 'edit-resource-container-' + resourceId;
+
+                console.log(`IDs to be used - Title: ${titleInputId}, Description: ${descriptionInputId}, Container: ${resourceContainerId}`);
+
+                // Obtención de datos de recurso
+                fetch("/get_resource_data/" + resourceId + "/")
+                    .then(response => response.json())
+                    .then(data => {
+                        const titleInput = document.getElementById(titleInputId);
+                        const descriptionInput = document.getElementById(descriptionInputId);
+                        const resourceContainer = document.getElementById(resourceContainerId);
+
+                        if (titleInput && descriptionInput && resourceContainer) {
+                            titleInput.value = data.title;
+                            descriptionInput.value = data.description;
+                            resourceContainer.style.display = 'block';
+                            console.log("Resource data populated successfully.");
+                        } else {
+                            console.error('Failed to find one or more elements by ID:', {titleInputId, descriptionInputId, resourceContainerId});
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching or processing data:', error);
+                    });
+            }
+        }
+    });
+
+    console.log("Edit event listeners set up with delegation.");
+
+    // Evento de clic para el botón de cancelar
+    document.addEventListener('click', function(event) {
+        if (event.target && event.target.classList.contains('hr-cancel-button')) {
+            const resourceId = event.target.getAttribute('data-dismiss').split('-')[3];
+            console.log('Cancel button clicked for resource id: ' + resourceId);
+            document.getElementById('edit-resource-container-' + resourceId).style.display = 'none';
+        }
+    });
+
+    // Evento de envío para el formulario de edición
+    document.addEventListener('submit', function(e) {
+        const form = e.target;
+        if (form.id.startsWith('edit-resource-form-')) {
+            e.preventDefault();
+            console.log("Edit form submitted for resource id:", form.id);
+
+            const resourceId = form.id.split('-')[3];
+            const formData = new FormData(form);
+
+            if (document.getElementById('remove-media-file-' + resourceId).checked) {
+                formData.append('remove_media_file', 'true');
+            }
+
+            // Incluir token CSRF en los encabezados si se usa Django
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            fetch("/resource/" + resourceId + "/update/", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log("Successful update for resource id:", resourceId);
+                    document.getElementById('edit-resource-container-' + resourceId).style.display = 'none';
+                    location.reload();
+                    // Actualizar elementos en la página según sea necesario sin recargar
+                } else {
+                    console.error('Server error:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    });
+});
+
+</script>
+
+
+
+
+
+
+
+
+<style>
+
+.hr-post {
+    border: 1px solid white;/* Añade una barra amarilla en la parte superior */
+    /* Mantén el resto de tus estilos aquí */
+    background-color: #898989; /* O el color que ya tengas */
+    margin: 40px 0;
+    padding: 20px;
+    border-radius: 0px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    width: calc((400px * 2) + 20px);
+    box-sizing: border-box;
+    margin: 0 auto;
+    
+}
+
+/* Si también deseas que solo la barra amarilla sea visible y no el borde blanco alrededor, actualiza el estilo así: */
+
+
+.centrar-contenido {
+    padding: 0
+}
+
+/* Estilo para la línea divisoria blanca */
+.hr-post-separator {
+    height: 0.5px;
+    background-color: white;
+    margin: 20px;
+}
+
+/* Añadir margen a la izquierda para .hr-author-info */
+.hr-author-info {
+    margin-left: 20px;
+    position: relative;
+}
+
+.hr-author-info::after {
+    content: "";
+    position: absolute;
+    right: -20px;
+    width: 20px;
+    top: 0;
+}
+
+.hr-content-box {
+  border: 1px solid white;
+  margin: 20px auto;
+  padding: 20px;
+  max-width: calc(100% - 40px);
+  box-sizing: border-box;
+}
+
+.hr-comment-count {
+margin-bottom: 0;
+}
+
+.centrar-contenido .hr-post {
+  background-color: #898989;
+  margin: 40px 0;
+  padding: 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  width: calc((400px * 2) + 20px);
+  box-sizing: border-box;
+  margin: 0 auto;
+  
+}
+
+
+
+/* Media file styles */
+.hr-media-thumbnail {
+    max-height: 200px;
+    width: auto;
+}
+
+/* Más estilos de .hr-post-actions aquí */
+.centrar-contenido .hr-post-actions {
+    /* Adaptación de los estilos de .hc-centrar-contenido .hc-post-actions */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 25px;
+    /* ... */
+}
+
+/* Estilos para los botones like, save y more options */
+.centrar-contenido .hr-post-actions .hr-like-button,
+.centrar-contenido .hr-post-actions .hr-save-btn,
+.centrar-contenido .hr-post-actions .hr-download-button,
+.centrar-contenido .hr-post-actions .hr-more-options-button {
+    background-color:transparent; /* Color de fondo verde */
+    border: 1px solid white;
+    color: white; /* Color del texto blanco */
+    padding: 0 20px; /* Padding horizontal basado en el contenido */
+    height: 40px; /* Altura fija de 100px */
+    line-height: 40px; /* Alinea el texto verticalmente */
+    border-radius: 0; /* Esquinas rectangulares */ /* Sin bordes */
+    cursor: pointer;
+    width: auto;
+    text-decoration: none; /* Quitar subrayado de enlaces */
+    display: inline-block; /* Para que respete el padding y margin */
+    margin: 0 5px; /* Espaciado entre botones */
+    box-sizing: border-box; /* Para incluir el padding y border en la altura y anchura total */
+    transition: background-color 0.2s, color 0.2s; /* Transición suave para hover */
+    /* Adaptación de los estilos de .hc-centrar-contenido .hc-post-actions .hc-like-button */
+    /* ... */
+}
+
+
+.centrar-contenido .hr-post-actions .hr-download-button {
+    margin-left: 25px;
+    background-color: rgb(255, 188, 188);
+    color:rgb(100, 100, 100);
+    
+   
+}
+
+/* Para los estilos hover de estos botones */
+.centrar-contenido .hr-post-actions .hr-like-button:hover,
+.centrar-contenido .hr-post-actions .hr-download-button:hover,
+.centrar-contenido .hr-post-actions .hr-save-btn:hover,
+.centrar-contenido .hr-post-actions .hr-more-options-button:hover {
+    background-color: white; /* Color de fondo más oscuro al pasar el ratón */
+    color: #000000; /* Para mejorar el contraste al pasar el ratón */
+}
+
+
+
+</style>
+
+{% endblock %}
+

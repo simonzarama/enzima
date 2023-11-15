@@ -1,0 +1,846 @@
+{% extends 'base_user.html' %}
+{% load custom_filters %}
+{% load static %}
+
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+
+{% block content %}
+
+
+<div class="custom-container">
+    <div class="centrar-contenido">
+        <!-- Bloque de autor y tags se mueve aquí, justo dentro de centrar-contenido pero antes del artículo -->
+        {% if resource.tags.all %}
+            <p class="resource-author-tags">
+                Uploaded by:
+                <a href="{% url 'profile' resource.creator.username %}" class="link-blanco">{{ resource.creator.username }}</a>
+                <span>on:
+                    {% for tag in resource.tags.all %}
+                        <a href="{% url 'view_community' tag.name %}" class="link-blanco">{{ tag.name }}</a>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </span>
+            </p>
+        {% else %}
+            <p class="resource-author-tags">
+                Uploaded by:
+                <a href="{% url 'profile' resource.creator.username %}" class="link-blanco">{{ resource.creator.username }}</a>
+            </p>
+        {% endif %}
+
+        <!-- Comienza el artículo -->
+        <article class="resource">
+            <a href="{% url 'view_resource_detail' resource.id %}" class="resource-link">
+                <h3 id="resource-title-{{ resource.id }}">{{ resource.title }}</h3>
+                <div class="media-container">
+                    {% if resource.file %}
+                        {% if resource.file.url|lower|endswith:".mp4" or resource.file.url|lower|endswith:".webm" %}
+                            <video controls>
+                                <source src="{{ resource.file.url }}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        {% else %}
+                            <img src="{{ resource.file.url }}" alt="Resource file">
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <p id="resource-content">{{ resource.description|linebreaks }}</p>
+            </a>
+            <div class="resource-separator"></div>
+            <div class="resource-actions">
+                <p class="comment-count" id="comment-count-{{ resource.id }}">
+                    {{ resource.comments.count }} Comment{{ resource.comments.count|pluralize }}
+                </p>
+                <a href="#" data-resourceid="{{ resource.id }}" class="action-button like-button">
+                    {% if is_liked %}
+                        Unlike
+                    {% else %}
+                        Like
+                    {% endif %}
+                </a>
+                <span class="like-count" id="like-count-{{ resource.id }}">{{ resource.likes_count }} Like{{ resource.likes_count|pluralize }}</span>
+                <button data-content-type-slug="resource" data-content-id="{{ resource.id }}" class="action-button save-button">
+                    {% if is_saved %}
+                        Unsave
+                    {% else %}
+                        Save
+                    {% endif %}
+                </button>
+                <button class="action-button more-options-button" data-resource-id="{{ resource.id }}" id="more-options-btn-{{ resource.id }}">More Options</button>
+                <a href="{{ resource.media_file.url }}" class="action-button cr-download-button">Download</a>
+                <div class="options-container" id="options-container-{{ resource.id }}" style="display:none;">
+                    <button class="edit-button" data-resource-id="{{ resource.id }}">Edit</button>
+                    <button class="delete-button" data-resource-id="{{ resource.id }}">Delete</button>
+                </div>
+            </div>
+            
+<!-- ... -->
+
+            </div>
+            <div class="comment-section">
+                <form method="post" action="{% url 'add_comment_to_resource' resource.id %}" id="comment-form" data-resource-id="{{ resource.id }}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="comment_text">Add Comment:</label><br>
+                        <textarea id="comment_text" name="comment_text" rows="4" cols="50"></textarea>
+                    </div>
+                    <button type="submit">Comment</button>
+                </form>
+            
+               
+                <div class="comments-list">
+                {% for comment in resource.comments.all %}
+                    <div class="comment" id="comment-{{ comment.id }}">
+                        <p>By <a href="{% url 'profile' comment.user.username %}" class="link-blanco">{{ comment.user.username }}</a></p>
+                        <p>{{ comment.text }}</p>
+                        {% if request.user == comment.user %}
+                            <div class="edit-buttons-container">
+                                <a href="#" class="edit-comment-button text-button" data-comment-id="{{ comment.id }}">
+                                    <i class="fa fa-edit"></i> Edit
+                                </a>
+                                <a href="#" class="delete-comment-button text-button" data-comment-id="{{ comment.id }}">
+                                    <i class="fa fa-trash"></i> Delete
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div> 
+            </div>
+        </article>
+</div>
+
+<!-- Modal para editar comentarios -->
+<div id="edit-comment-modal" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+    <textarea id="edit-comment-textarea" rows="4" cols="50"></textarea>
+    <div id="edit-button-container" style="display: flex; justify-content: space-around; margin-top: 10px;">
+        <button id="cancel-edit-button" class="cancel-button">Cancel</button>
+        <button id="save-edit-comment-button" class="save-button">Save</button>
+    </div>
+</div>
+
+<!-- Modal para confirmar la eliminación de comentarios -->
+<div id="delete-comment-modal" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+    <p>Are you sure you want to delete this comment?</p>
+    <div id="delete-button-container" style="display: flex; justify-content: space-around; margin-top: 10px;">
+        <button id="cancel-delete-button" class="cancel-button">Cancel</button>
+        <button id="confirm-delete-button" class="save-button">Delete</button>
+    </div>
+</div>
+
+<!-- BOTONES DE MAS OPCIONES-->
+
+<div id="delete-confirmation" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+    <p>Are you sure you want to delete this?</p>
+    <div id="button-container" style="display: flex; justify-content: space-around;">
+        <button id="cancel-button" class="cancel-button">Cancel</button>
+        <button id="confirm-post-delete-button" class="btn delete-button" data-community-name="{{ post.community.name }}">Delete</button>
+    </div>
+</div>
+
+
+<div id="edit-resource-container" class="edit-resource-container" style="display:none; border: 1px solid black;">
+    <form id="edit-resource-form" method="post" enctype="multipart/form-data" data-action="{% url 'update_resource_ajax' resource.id %}">
+
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="edit-title">Title:</label>
+            <input type="text" id="edit-title" name="title" required="" value="{{ resource.title }}" style="border: 1px solid black;">
+        </div>
+        <div class="form-group">
+            <label for="edit-description">Description:</label>
+            <textarea id="edit-description" name="description" style="border: 1px solid black; width: 800px; min-height: 300px;">{{ resource.description }}</textarea>
+        </div>
+        <div class="form-group">
+            <label for="edit-file-input">Attach file:</label>
+            <input type="file" id="edit-file-input" name="media_file" multiple accept="image/*,video/*">
+            <div id="current-file">
+                {% if resource.file %}
+                    Current File: {{ resource.file.url.split|last }}
+                {% endif %}
+            </div>
+            <input type="checkbox" id="remove-media-file" name="remove_media_file" value="true">
+            <label for="remove-media-file">Delete File</label>
+        </div>
+        <div class="edit-buttons-container">
+            <button type="submit" class="save-changes-button">Save Changes</button>
+            <button type="button" id="cancel-edit-resource-button" class="cancel-button">Cancel</button>
+        </div>
+    </form>
+</div>
+
+<!-- Script de editar y eliminar comentarios-->
+<script>
+ // Variable global para mantener la referencia al comentario que se está editando/eliminando
+
+$(document).ready(function() {
+
+    // Manejador de eventos para editar un comentario
+    $(document).on('click', '.edit-comment-button', function() {
+        currentCommentId = $(this).data('comment-id');
+        let currentText = $('#comment-' + currentCommentId + ' p:nth-child(2)').text();
+        $('#edit-comment-textarea').val(currentText);
+        $('#edit-comment-modal').show();
+    });
+
+    // Manejador de eventos para eliminar un comentario
+    $(document).on('click', '.delete-comment-button', function() {
+        currentCommentId = $(this).data('comment-id');
+        $('#delete-comment-modal').show();
+    });
+
+    // Manejador de eventos para cancelar la edición/eliminación de un comentario
+    $('#cancel-edit-button, #cancel-delete-button').click(function() {
+        $('#edit-comment-modal, #delete-comment-modal').hide();
+    });
+
+    // Manejador de eventos para guardar el comentario editado
+    $('#save-edit-comment-button').click(function() {
+        let newText = $('#edit-comment-textarea').val();
+        if (newText) {
+            $.ajax({
+                url: `/resource/comment/${currentCommentId}/edit/`,
+                method: 'POST',
+                data: { text: newText },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('#comment-' + currentCommentId + ' p:nth-child(2)').text(newText);
+                        $('#edit-comment-modal').hide();
+                    } else {
+                        console.error('Error al actualizar el comentario:', response.error);
+                    }
+                },
+                error: function(response) {
+                    console.error('Error:', response);
+                }
+            });
+        }
+    });
+
+    // Manejador de eventos para eliminar el comentario
+    $('#confirm-delete-button').click(function() {
+        $.ajax({
+            url: `/resource/comment/${currentCommentId}/delete/`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#comment-' + currentCommentId).remove();
+                    $('#delete-comment-modal').hide();
+                    
+                    // Actualiza el contador de comentarios
+                    let commentCountElement = $('.comment-count');
+                    let currentCount = parseInt(commentCountElement.text(), 10) - 1;
+                    commentCountElement.text(currentCount + " Comment" + (currentCount !== 1 ? "s" : ""));
+                } else {
+                    console.error('Error al eliminar el comentario:', response.error);
+                }
+            },
+            error: function(response) {
+                console.error('Error:', response);
+            }
+        });
+    });
+});
+
+</script>
+
+<script>
+
+// Funcionalidad de "LIKE"
+document.querySelectorAll('.like-button').forEach(button => {
+    button.addEventListener('click', function(e) {
+        e.preventDefault();
+        const resourceId = this.getAttribute('data-resourceid');
+        const buttonElement = this;
+
+        fetch(`/like_resource/${resourceId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.is_liked) {
+                buttonElement.textContent = "Unlike";
+            } else {
+                buttonElement.textContent = "Like";
+            }
+            const likesCount = data.likes_count;
+            document.querySelector('#like-count-' + resourceId).textContent = 
+                likesCount + ' Like' + (likesCount !== 1 ? 's' : '');
+        })
+        .catch(error => {
+            console.error("There was a problem with the fetch operation:", error.message);
+        });
+    });
+});
+
+
+</script>
+
+<script>
+let currentCommentId;
+
+$(document).ready(function() {
+
+    // Manejador de eventos para editar un comentario
+    $(document).on('click', '.edit-comment-button', function() {
+        currentCommentId = $(this).data('comment-id');
+        let currentText = $('#comment-' + currentCommentId + ' p:nth-child(2)').text();
+        $('#edit-comment-textarea').val(currentText);
+        $('#edit-comment-modal').show();
+    });
+
+    // Manejador de eventos para eliminar un comentario
+    $(document).on('click', '.delete-comment-button', function() {
+        currentCommentId = $(this).data('comment-id');
+        $('#delete-comment-modal').show();
+    });
+
+    // Manejador de eventos para cancelar la edición/eliminación de un comentario
+    $('#cancel-edit-button, #cancel-delete-button').click(function() {
+        $('#edit-comment-modal, #delete-comment-modal').hide();
+    });
+
+    // Manejador de eventos para guardar el comentario editado
+    $('#save-edit-comment-button').click(function() {
+        let newText = $('#edit-comment-textarea').val();
+        if (newText) {
+            $.ajax({
+                url: `/campaign/${currentCommentId}/edit_comment/`,
+                method: 'POST',
+                data: { text: newText },
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('#comment-' + currentCommentId + ' p:nth-child(2)').text(newText);
+                        $('#edit-comment-modal').hide();
+                    } else {
+                        console.error('Error al actualizar el comentario:', response.error);
+                    }
+                },
+                error: function(response) {
+                    console.error('Error:', response);
+                }
+            });
+        }
+    });
+
+    // Manejador de eventos para eliminar el comentario
+    $('#confirm-delete-button').click(function() {
+        $.ajax({
+            url: `/campaign/${currentCommentId}/delete_comment/`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#comment-' + currentCommentId).remove();
+                    $('#delete-comment-modal').hide();
+                    
+                    // Actualiza el contador de comentarios
+                    let commentCountElement = $('.comment-count');
+                    let currentCount = parseInt(commentCountElement.text(), 10) - 1;
+                    commentCountElement.text(currentCount + " Comentario" + (currentCount !== 1 ? "s" : ""));
+                } else {
+                    console.error('Error al eliminar el comentario:', response.error);
+                }
+            },
+            error: function(response) {
+                console.error('Error:', response);
+            }
+        });
+    });
+
+    // Obtiene el token CSRF
+    function getCsrfToken() {
+        return $('[name=csrfmiddlewaretoken]').val();
+    }
+
+    // Manejador de eventos para publicar un comentario
+    $("#comment-form").submit(function(e) {
+    e.preventDefault();
+
+    $.ajax({
+        type: "POST",
+        url: $(this).attr("action"),
+        data: $(this).serialize(),
+        dataType: "json",
+        success: function(response) {
+            // Crea el bloque de comentario
+            var commentBlock = `
+                <div class="comment" id="comment-${response.comment_id}">
+                    <p>By <a href="/profile/${response.username}" class="link-blanco">${response.username}</a></p>
+                    <p>${response.text}</p>
+            `;
+
+            // Si el usuario es el propietario, agrega los botones de editar y eliminar
+            if (response.is_owner) {
+                commentBlock += `
+                    <div class="edit-buttons-container">
+                        <a href="#" class="edit-comment-button text-button" data-comment-id="${response.comment_id}">
+                            <i class="fa fa-edit"></i> Edit
+                        </a>
+                        <a href="#" class="delete-comment-button text-button" data-comment-id="${response.comment_id}">
+                            <i class="fa fa-trash"></i> Delete
+                        </a>
+                    </div>
+                `;
+            }
+
+            commentBlock += `</div>`;
+
+            // Agrega el comentario al final
+            $(".comments-list").append(commentBlock);
+        }
+    });
+});
+
+});
+
+
+
+</script>
+
+
+<script>
+// Funcionalidad de "más opciones"
+document.querySelectorAll('.more-options-button').forEach(button => {
+    button.addEventListener('click', function(event) {
+        console.log('Botón de más opciones clickeado');
+        event.stopPropagation();
+        var optionsContainer = document.querySelector('#options-container-' + button.getAttribute('data-resource-id'));
+        console.log(optionsContainer);
+        optionsContainer.style.display = optionsContainer.style.display === 'none' ? '' : 'none';
+    });
+});
+
+document.addEventListener('click', function(event) {
+    document.querySelectorAll('.more-options-button').forEach(button => {
+        var optionsContainer = document.querySelector('#options-container-' + button.getAttribute('data-resource-id'));
+        var isClickInside = optionsContainer.contains(event.target);
+        if (!isClickInside && optionsContainer.style.display !== 'none') {
+            optionsContainer.style.display = 'none';
+        }
+    });
+});
+
+// Usamos jQuery aquí, por lo que asegúrate de tener jQuery incluido en tu proyecto
+$(document).ready(function() {
+    // Al hacer clic en el botón de eliminar
+    $('.delete-button').click(function() {
+        var resource_id = $(this).data("resource-id");
+        $('#delete-confirmation').data('resource-id', resource_id).show();
+    });
+
+    // Al hacer clic en el botón de cancelar la eliminación
+    $('#cancel-button').click(function()  {
+        $('#delete-confirmation').hide();
+    });
+
+    // Al confirmar la eliminación del recurso
+    $('#confirm-post-delete-button').click(function() {
+        var resource_id = $('#delete-confirmation').data('resource-id');
+        var redirect_url = "{% url 'home' %}";
+
+        $('#delete-resource-modal').hide();
+
+        $.ajax({
+            url: "{% url 'delete_resource' 9999 %}".replace(9999, resource_id),
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            success: function(response) {
+                window.location.href = redirect_url;
+            },
+            error: function(response) {
+                console.log('Error:', response);
+            }
+        });
+    });
+});
+
+
+
+$(document).ready(function() {
+    console.log("Document ready!")
+    
+    $('.edit-button').click(function() {
+        console.log("Edit resource button clicked!"); 
+        var resource_id = $(this).data("resource-id");
+        
+        $.ajax({
+            url: '/get_resource_data/' + resource_id + '/',
+            method: 'GET',
+            success: function(response) {
+                $('#edit-title').val(response.title);
+                $('#edit-description').val(response.description);
+                $('#edit-resource-container').data('resource-id', resource_id).show();
+            },
+            error: function(response) {
+                console.log('Error:', response);
+            }
+        });
+    });
+
+    $('#cancel-edit-resource-button').on('click', function() {
+        console.log('Botón cancelar clickeado');
+        $('#edit-resource-container').hide();
+    });
+    
+    $('#edit-resource-form').submit(function(e){
+        e.preventDefault();
+        var resource_id = $('#edit-resource-container').data('resource-id');
+        var new_title = $('#edit-title').val();
+        var new_description = $('#edit-description').val();
+        var media_file = $('#edit-file-input')[0].files[0];
+    
+        var formData = new FormData();
+        formData.append('title', new_title);
+        formData.append('description', new_description);
+        if (media_file) {
+            formData.append('media_file', media_file);
+        }
+
+        if ($('#remove-media-file').prop('checked')) {
+            formData.append('remove_media_file', 'true');
+        }
+    
+        $.ajax({
+            url: `/resource/${resource_id}/update/`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    $('#resource-title-' + resource_id).text(response.title);
+                    $('#resource-content-' + resource_id).html(response.description.replace(/\n/g, '<br>'));
+                    if (response.media_url) {
+                        var mediaElement;
+                        if (response.media_url.toLowerCase().endsWith('.mp4')) {
+                            mediaElement = `<video controls><source src="${response.media_url}" type="video/mp4">Your browser does not support the video tag.</video>`;
+                        } else {
+                            mediaElement = `<img src="${response.media_url}" alt="Media file">`;
+                        }
+                        $('#resource-file-' + resource_id).replaceWith(mediaElement);
+                    } else {
+                        $('#resource-file-' + resource_id).replaceWith('');
+                    }
+                    $('#edit-resource-container').hide();
+                    location.reload();
+                } else {
+                    console.error('Error del servidor:', response.error);
+                }
+            },
+            error: function(response) {
+                console.log('Error:', response);
+            }
+        });
+    });
+});
+let editResourceForm = document.getElementById('edit-resource-form');
+editResourceForm.addEventListener('submit', function(event) {
+    event.preventDefault();
+    
+    let formData = new FormData(editResourceForm);
+    let formActionURL = editResourceForm.getAttribute('data-action');
+    
+    fetch(formActionURL, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Puedes manejar el éxito o el error aquí si es necesario, pero no mostramos alertas.
+        // Por ejemplo, podrías actualizar la interfaz de usuario según sea necesario.
+    })
+    .catch(error => {
+        console.error('Hubo un error:', error);
+    });
+});
+
+
+
+
+
+    // SCRIPT DE BOTON GUARDAR
+
+    document.querySelectorAll('.save-button').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const contentId = this.getAttribute('data-content-id');
+            const contentTypeSlug = this.getAttribute('data-content-type-slug');
+            
+            // Endpoint dinámico basado en el tipo de contenido
+            let endpoint;
+            if (contentTypeSlug === 'resource') {
+                endpoint = `/resource/${contentId}/save/`;
+            } else if (contentTypeSlug === 'campaign') {
+                endpoint = `/campaign/${contentId}/save/`;
+            } // ... añade más condiciones si hay otros tipos de contenido
+            
+            // Imprimir los valores para depuración
+            console.log('Content ID:', contentId);
+            console.log('Content Type Slug:', contentTypeSlug);
+            
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                this.textContent = data.saved ? "Unsave" : "Save";
+            });
+        });
+    });
+    
+</script>
+
+<style>
+
+
+.resource-author-tags {
+    color: white; /* Cambia el color del texto a blanco */
+}
+
+.resource-author-tags a {
+    text-decoration: none; /* Remueve el subrayado por defecto */
+    border-bottom: 1px solid white; /* Línea blanca debajo del texto */
+    color: white; /* Asegura que el color del enlace es blanco */
+}
+
+.custom-container {
+    /* Estilo para el contenedor personalizado */
+    background-color: #808080; /* Fondo gris para que coincida con el estilo existente */
+    border-radius: 10px; /* Bordes redondeados */
+    padding: 20px; /* Espacio interno */
+    margin: 20px auto; /* Centrado con espacio arriba y abajo */
+    max-width: 800px; /* Ancho máximo */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra sutil */
+}
+
+.centrar-contenido {
+    display: contents;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 0px;
+}
+
+.resource {
+    /* Estilo para cada recurso individual */
+    border: 1px solid white;
+    border-radius: 5px;
+    padding: 20px;
+    margin-bottom: 20px;
+    background-color: transparent;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.resource-link h3 {
+    /* Estilo para el título del recurso */
+    color: white; /* Título en blanco */
+    text-decoration: none; /* Sin subrayado */
+}
+
+.resource-link p {
+    /* Estilo para la descripción del recurso */
+    color: white; /* Descripción en blanco */
+}
+
+
+.media-container {
+    /* Estilo para el contenedor de medios */
+    max-width: 100%;
+    overflow: hidden; /* Asegúrate de que no se desborde el contenido */
+}
+
+.media-container img,
+.media-container video {
+    width: 100%;
+    height: auto;
+    border-radius: 5px; /* Opcional: bordes redondeados para las imágenes/videos */
+}
+
+.resource-actions {
+    /* Estilo para las acciones del recurso como like, save, etc. */
+    display: flex;
+    align-items: center;
+    justify-content: start;
+    gap: 10px; /* Espacio entre botones */
+    padding-top: 20px; /* Espacio superior */
+    border-top: 1px solid white; /* Línea divisoria */
+}
+
+.action-button {
+    /* Estilo para los botones de acción */
+    background-color: #808080; /* Fondo gris */
+    color: white;
+    border: 1px solid white;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    border-radius: 4px; /* Bordes redondeados */
+}
+
+.action-button:hover {
+    /* Estilo para los botones de acción al pasar el ratón por encima */
+    background-color: white;
+    color: black;
+    border-color: black;
+}
+
+/* Asegúrate de que este CSS esté incluido en tu archivo styles.css */
+.centrar-contenido .resource-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 25px 0; /* Ajuste el margen solo vertical */
+}
+
+
+
+.centrar-contenido .resource-actions .cr-download-button {
+    margin-left: 25px;
+    background-color: rgb(255, 188, 188);
+    color: rgb(100, 100, 100);
+}
+
+/* Estilos hover para los botones */
+.centrar-contenido .resource-actions .action-button:hover,
+.centrar-contenido .resource-actions .cr-download-button:hover,
+.centrar-contenido .resource-actions .more-options-button:hover {
+    background-color: white;
+    color: #000000;
+}
+
+
+.centrar-contenido .resource-actions .comment-count,
+.centrar-contenido .resource-actions .like-count {
+    color: white; /* Esto cambiará el texto a blanco */
+}
+
+/* Si los elementos están heredando estilos de alguna otra parte que les asigna un color diferente, puedes necesitar usar `!important` para asegurar que el color blanco prevalezca. Aunque su uso no es una buena práctica general, puede ser útil en casos de herencia de estilos no deseados. */
+
+.centrar-contenido .resource-actions .comment-count,
+.centrar-contenido .resource-actions .like-count {
+    color: white !important; /* Esto asegura que el color blanco se aplique incluso si hay otros estilos en conflicto */
+}
+.comment-section {
+    /* Estilo para la sección de comentarios */
+    background-color: #808080; /* Fondo gris */
+    padding: 20px; /* Espacio interno */
+    border: 1px solid white;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin-top: 20px; /* Espacio superior */
+}
+
+.comment-section form button {
+    /* Botón para enviar comentarios */
+    width: 100%; /* Ocupa todo el ancho */
+    background-color: gray;
+    color: white;
+    border: 1px solid white;
+    padding: 10px 0; /* Espacio vertical */
+}
+
+.comment-section form button:hover {
+    /* Estilo para el botón de enviar comentarios al pasar el ratón */
+    background-color: white;
+    color: black;
+    border-color: black;
+}
+
+.comments-list {
+    /* Estilo para la lista de comentarios */
+    margin-top: 20px; /* Espacio superior */
+}
+
+.comments-list .comment {
+    /* Estilo para cada comentario individual */
+    border-top: 1px solid white; /* Línea divisoria entre comentarios */
+    padding-top: 10px; /* Espacio superior */
+    margin-top: 10px; /* Espacio exterior superior */
+}
+
+.edit-buttons-container {
+    /* Estilo para los botones de editar/eliminar comentario */
+    display: flex;
+}
+
+/* Se asegura que el texto de 'Uploaded by' sea blanco y tenga la línea debajo en los enlaces */
+.custom-container .resource > p:first-child,
+.custom-container .resource > p:first-child .link-blanco {
+    color: white;
+}
+
+.custom-container .resource > p:first-child .link-blanco {
+    text-decoration: underline;
+}
+
+/* Alinea el botón de comentarios y el textarea */
+.custom-container .comment-section form textarea,
+.custom-container .comment-section form button {
+    width: 100%;
+    box-sizing: border-box; /* Asegura que padding y border no afecten el ancho establecido */
+}
+
+/* Estilos específicos para la sección de comentarios para asegurar que el texto sea blanco */
+.custom-container .comment-section,
+.custom-container .comment-section .comment,
+.custom-container .comment-section .comment a.link-blanco,
+.custom-container .edit-buttons-container a {
+    color: white;
+}
+
+.custom-container .edit-buttons-container a {
+    text-decoration: none;
+    margin-right: 20px;
+}
+
+.custom-container .edit-buttons-container a i.fa {
+    color: white;
+}
+
+/* Ajuste adicional por si 'fa' no está directamente aplicado a la 'i' */
+.custom-container .edit-buttons-container a .fa {
+    color: white;
+}
+
+
+
+/* Para garantizar que los estilos sean aplicados correctamente, añadir '!important' si es necesario */
+
+</style>
+
+{% endblock %}

@@ -26,12 +26,20 @@ SECRET_KEY = 'django-insecure-zn!!^(#4=&#0qlya!20$yw__+sg#u2y&d0ap$f=$n#+058ai9%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [ '.vercel.appp']
+
+# Solo para desarrollo, no usar en producción
+CSRF_TRUSTED_ORIGINS = [
+    'https://501e-186-154-39-107.ngrok-free.app'  # Asegúrate de que no haya un espacio al final aquí
+]
+
+
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'django_select2',
     'myapp',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -40,6 +48,25 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 ]
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+}
+
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -56,7 +83,7 @@ ROOT_URLCONF = 'mysite.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'mysite/templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -117,10 +144,20 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'myapp', 'static'),
 ]
+
+
+# MEDIA
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# settings.py
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1073741824  # 1GB in bytes
 
 
 # Default primary key field type

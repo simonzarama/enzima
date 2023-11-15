@@ -1,0 +1,291 @@
+{% extends 'base_user.html' %}
+{% load custom_filters %}
+{% load static %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/autolinker/3.14.3/Autolinker.min.js"></script>
+<link href="{% static 'django_select2/django_select2.css' %}" rel="stylesheet">
+<script src="{% static 'django_select2/django_select2.js' %}"></script>
+
+{% block content %}
+
+
+
+
+<div class="centrar-campaign">
+    <h2>Start a Crowdfunding Campaign</h2>
+    
+    <form method="post" action="{% url 'create_campaign' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- Título de la campaña -->
+        <div class="form-group">
+            <label for="{{ form.title.id_for_label }}">Title:</label>
+            {{ form.title }}
+        </div>
+
+        <!-- Descripción de la campaña -->
+        <div class="form-group">
+            <label for="{{ form.description.id_for_label }}">Description:</label>
+            {{ form.description }}
+        </div>
+
+        <!-- Meta de la campaña -->
+        <div class="form-group">
+            <label for="{{ form.goal.id_for_label }}">Goal ($):</label>
+            {{ form.goal }}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.communities.id_for_label }}">Communities:</label>
+            {{ form.communities }}
+        </div>
+        
+        
+        <div class="selected-communities">
+            <h3>Selected Communities:</h3>
+            <div id="selected-communities-list"></div>
+        </div>
+        
+        
+        
+        <!-- Archivo multimedia -->
+        <div class="form-group">
+            <label>Media:</label>
+            <input type="file" id="file-input" name="media_file" multiple accept="image/*,video/*"/>
+        </div>
+
+        <div class="file-preview" id="file-preview"></div>
+
+        <button type="submit">Create Campaign</button>
+    </form>
+</div>
+
+<style>
+    /* Estilos generales */
+    
+    .centrar-campaign {
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center;
+        min-height: 100vh;
+        
+    }
+    
+    .centrar-campaign h2 {
+        margin-bottom: 20px;
+        color: #808080;
+    }
+    
+    /* Estilos del formulario */
+    .centrar-campaign form {
+        background-color: #808080; 
+        padding: 20px;
+        border: 1px solid white; 
+        border-radius: 5px; 
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); 
+        width: 100%;
+        max-width: calc((400px * 2) + 20px);
+        box-sizing: border-box;
+        
+    }
+
+    .centrar-campaign form input[type="text"],  /* Selector para el campo de título */
+    .centrar-campaign form textarea {           /* Selector para el campo de descripción */
+    width: 100%;                           /* Ancho completo */
+    box-sizing: border-box;                /* Asegurar que el padding y border no aumenten el tamaño total */
+    }
+    
+    .centrar-campaign form button {
+        display: block; 
+        margin: 10px auto; 
+        padding: 10px 20px;
+        background-color:  rgb(234, 216, 127); 
+        color: #000000; 
+        border: 1px solid white; 
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .centrar-campaign form button:hover {
+        background-color: rgb(234, 127, 127); 
+    }
+    
+    .centrar-campaign form p {
+        margin-bottom: 15px; 
+    }
+    
+    .centrar-campaign form label {
+        display: block;
+        margin-bottom: 5px;
+    }
+    
+    .sub-button {
+        display: inline-block; 
+        margin-right: 10px;
+        padding: 8px 16px;
+        background-color:  rgb(234, 216, 127); 
+        color: #000000;
+        border: 1px solid white;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        border-radius: 5px;
+    }
+    
+    
+    .sub-button:hover {
+        background-color: rgb(234, 127, 127); /* Color de fondo del botón al pasar el mouse por encima */
+    }
+    
+    /* Estilos adicionales para form-group para mejorar la apariencia */
+    .form-group {
+        margin-bottom: 15px; /* Espacio entre los campos y el siguiente elemento */
+    }
+    
+    .form-group label {
+        display: block; /* Asegura que las etiquetas estén sobre los campos */
+        margin-bottom: 5px; /* Espacio entre etiqueta y campo */
+    }
+    
+    .icon-button {
+        background: none;
+        border: none;
+        font-size: 0.8em;  /* Reduzca el tamaño del icono */
+        margin-left: 5px;  /* Espaciado entre los botones e input */
+        cursor: pointer;
+        color: #808080;
+        vertical-align: middle;  /* Alineación vertical con el input */
+        transition: color 0.2s;
+    }
+    
+    .icon-button:hover {
+        color: rgb(234, 127, 127);
+    }
+    
+    .form-group {
+        position: relative;
+    }
+    
+    .post-options {
+        position: absolute;
+        top: 50%;
+        right: 0;
+        transform: translateY(-50%);
+        margin-left: 10px;
+    }
+    
+    .file-preview {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .preview-image {
+        max-width: 100px;
+        max-height: 100px;
+        border: 1px solid #ccc;
+    }
+    
+    .community-option {
+    display: inline-block;
+    padding: 5px 10px;
+    margin: 5px;
+    border: 1px solid #808080;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    }
+
+    .community-option.selected {
+        background-color: rgb(234, 216, 127) !important;
+    }
+
+
+
+
+    </style>
+
+<script>
+
+    document.addEventListener("DOMContentLoaded", function() {
+    
+        // Código para manejar la vista previa de imágenes/videos subidos
+        const fileInput = document.getElementById('file-input');
+        const filePreview = document.getElementById('file-preview');
+    
+        if (fileInput) {
+            fileInput.addEventListener('change', function(e) {
+                filePreview.innerHTML = '';  // Limpiar la vista previa anterior
+                const files = e.target.files;
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        if (file.type.startsWith('image/')) {
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.alt = file.name;
+                            img.classList.add('preview-image');
+                            filePreview.appendChild(img);
+                        } else {
+                            // Si no es una imagen, mostrar el nombre del archivo
+                            const div = document.createElement('div');
+                            div.textContent = file.name;
+                            filePreview.appendChild(div);
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+    
+        // Código para manejar la selección de comunidades
+        const communityOptions = document.querySelectorAll('.community-option');
+        const selectedCommunitiesList = document.getElementById('selected-communities-list');
+        const communitiesInput = document.getElementById('communitiesInputId');
+    
+        communityOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                const communityId = this.getAttribute('data-id');
+                if (this.classList.contains('selected')) {
+                    this.classList.remove('selected');
+                    removeSelectedCommunity(communityId);
+                } else {
+                    this.classList.add('selected');
+                    addSelectedCommunity(communityId, this.textContent);
+                }
+                updateCommunitiesInput();
+            });
+        });
+    
+        function addSelectedCommunity(id, name) {
+            const div = document.createElement('div');
+            div.setAttribute('data-id', id);
+            div.textContent = name;
+            selectedCommunitiesList.appendChild(div);
+        }
+    
+        function removeSelectedCommunity(id) {
+            const divToRemove = selectedCommunitiesList.querySelector(`div[data-id="${id}"]`);
+            if (divToRemove) {
+                divToRemove.remove();
+            }
+        }
+    
+        function updateCommunitiesInput() {
+            const selectedIds = [...selectedCommunitiesList.querySelectorAll('div')]
+                                .map(div => div.getAttribute('data-id'))
+                                .join(',');
+            if (communitiesInput) {
+                communitiesInput.value = selectedIds;
+            } else {
+                console.error("El elemento input para comunidades no fue encontrado.");
+            }
+        }
+    });
+    
+    </script>
+    
+    {% endblock %}
+    

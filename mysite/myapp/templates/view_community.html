@@ -1,43 +1,771 @@
 {% extends 'base_user.html' %}
+{% load static %}
+{% load custom_filters %}
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+
+
+
 
 
 {% block content %}
 
-    <div class="community-header">
-        <h1>{{ community.name }}</h1>
-        <button class="notification-btn">Notificaciones</button>
-        <button class="subscribe-btn">Inscribir</button>
-    </div>
 
-    <div class="community-links">
-        <button class="link-btn"><a href="#" target="_blank">ClinicalTrials.gov</a></button>
-        <button class="link-btn"><a href="#" target="_blank">Open Trials</a></button>
-        <button class="link-btn"><a href="#" target="_blank">Resources</a></button>
-    </div>
+<br>
+<br>
+<br>
+<br>
 
-    <div class="create-post">
-        <button class="link-btn"><a href="{% url 'create_post' community.id %}">Create Post</a>
-    </div>
 
-    {% for post in community.posts.all %}
-    <div class="post">
-        <h2>{{ post.title }}</h2>
-        <p>Publicado por: {{ post.user.username }}</p>
-        <p>{{ post.content }}</p>
-        <div class="post-actions">
-            <button>Me gusta</button>
-            <button>Guardar</button>
-            <button>Comentar</button>
+<div class="community-header" data-community-name="{{ community.name }}">
+    <h2>{{ community.name }}</h2>
+    <button class="notification-btn">
+        <i class="fas fa-bell notification-icon"></i>
+    </button>
+    <button class="join-btn">Join</button>
+</div>
+
+<style>
+    .notification-icon {
+    color: #808080; /* Color inicial del ícono. Puedes ajustarlo según tus preferencias. */
+    font-size: 20px; /* Tamaño del ícono. Ajusta según necesidad. */
+    cursor: pointer; /* Cambia el cursor a mano al pasar sobre el ícono. */
+    transition: color 0.3s; /* Efecto de transición suave al cambiar de color. */
+}
+
+.notification-btn:focus .notification-icon,
+.notification-icon:active {
+    color: rgb(234, 216, 127); /* Cambia a este color cuando se haga clic en el ícono. */
+}
+
+.notification-btn {
+    background: none; /* Elimina el fondo */
+    border: none; /* Elimina el borde */
+    padding: 0; /* Elimina el padding, si es necesario */
+    outline: none; /* Elimina el outline al hacer foco, si es necesario */
+}
+
+.community-header {
+    display: flex;           /* Activa flexbox */
+    align-items: center;     /* Alinea todos los elementos hijos verticalmente al centro */
+    justify-content: center;  /* Los elementos hijos comienzan al principio del contenedor */
+    gap: 10px;               /* Espacio entre elementos hijos (opcional, según tu diseño) */
+}
+
+.join-btn {
+    background-color: #808080; /* Color de fondo gris */
+    border: 1px solid white; /* Borde blanco de 1 pixel */
+    border-radius: 15px; /* Esquinas redondeadas */
+    color: white; /* Color de texto blanco */
+    padding: 10px 20px; /* Espacio alrededor del texto del botón */
+    cursor: pointer; /* Cambia el cursor a mano al pasar sobre el ícono */
+    transition: background-color 0.3s; /* Efecto de transición suave al cambiar de color de fondo */
+}
+
+.join-btn:hover {
+    background-color: rgb(144, 112, 242); /* Color de fondo azul al pasar el mouse por encima */
+}
+
+
+
+</style>
+
+<script>
+    $(document).ready(function(){
+        console.log("Iniciando script principal");
+
+        $('.join-btn').on('click', function() {
+    var currentText = $(this).text();
+    if (currentText === 'Join') {
+        $(this).text('Leave');
+    } else {
+        $(this).text('Join');
+    }
+});
+
+
+
+    });
+</script>
+
+
+<br>
+<br>
+
+<div class="center-content">
+    <div class="rectangle-container">
+        <!-- Botones para las vistas de la comunidad -->
+        <div class="community-button" data-btn="posts">
+            <a href="#">Posts</a>
         </div>
+        <div class="community-button" data-btn="resources">
+            <a href="#">Resources</a>
+        </div>
+        <div class="community-button" data-btn="crowdfunding">
+            <a href="#">Crowdfunding</a>
+        </div>
+        <div class="highlight-line"></div> <!-- Línea de resaltado -->
     </div>
+</div>
 
+<div class="results-container" id="posts-results">
+    {% include 'community_posts.html' %}
+</div>
+<div class="results-container" id="resources-results">
+    {% include 'community_resources.html' %}
+</div>
+<div class="results-container" id="crowdfunding-results">
+    {% include 'community_crowdfunding.html' %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let buttons = document.querySelectorAll('.community-button');
+        let highlight = document.querySelector('.highlight-line');
+        
+        buttons.forEach(function(button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+        
+                // Mover la línea de resaltado
+                let buttonRect = button.getBoundingClientRect();
+                let containerRect = highlight.parentElement.getBoundingClientRect();
+                highlight.style.left = (buttonRect.left - containerRect.left + window.pageXOffset) + "px";
+                
+                // Solicitar contenido AJAX
+                fetchContent(button.dataset.btn);
+            });
+        });
+        
+        // Solicitar contenido para 'posts' por defecto al cargar la página
+        fetchContent('posts');
+    });
+    
+    function fetchContent(section) {
+        let communityName = document.querySelector('.community-header').getAttribute('data-community-name');
+        let url = `/r/${communityName}/${section}/`;
+
+        // Agregar console.log para imprimir y verificar valores
+        console.log("Nombre de la comunidad:", communityName);
+        console.log("Sección seleccionada:", section);
+        console.log("URL construida:", url);
+
+        // Limpiar el contenido actual antes de hacer una nueva solicitud
+        document.getElementById(section + '-results').innerHTML = "";
+
+        $.ajax({
+            url: url,
+            method: 'GET',
+            success: function(data) {
+                document.getElementById(section + '-results').innerHTML = data;
+                showResults(section + '-results');
+            },
+            error: function(err) {
+                console.error(`Error al cargar el contenido de ${section}:`, err);
+            }
+        });
+    }
+
+    function showResults(resultType) {
+        // Oculta todos los contenedores de resultados
+        let allResults = document.querySelectorAll('.results-container');
+        allResults.forEach(result => result.style.display = 'none');
+        
+        // Muestra el contenedor de resultados específico
+        document.getElementById(resultType).style.display = 'block';
+    }
+
+</script>
+<!--
+
+<br>
+<br>
+<div class="center-content">
+    <div class="community-button special-button">
+        <a href="{% url 'create_post' community.id %}">Create Post</a>
+    </div>
+</div>
+
+
+<style>
+
+.center-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%; /* Ajusta según necesites. Si no quieres que tome todo el alto, puedes quitar esta línea o ajustar el valor. */
+}
+</style>
+
+
+
+
+
+
+<div class="centrar-contenido">
+
+    {% if post_count > 0 %}
+    <div class="ordenamiento">
+        <a href="?order=-published_at" class="btn {% if request.GET.order == '-published_at' or request.GET.order == None %}selected{% endif %}">New Comments</a>
+        <a href="?order=-likes_count" class="btn {% if request.GET.order == '-likes_count' %}selected{% endif %}">Popular Comments</a>
+        
+    </div>
+    {% endif %}
+
+
+
+    <br>
+    {% for post in posts %}
+    <article class="post">
+        <p>
+            Published by:
+            <a href="{% url 'profile' post.user.username %}" class="link-blanco">{{ post.user.username }}</a>
+            on
+            <a href="{% url 'view_community' post.community.name %}" class="link-blanco">{{ post.community.name }}</a>
+        </p>
+        <a href="{% url 'post_detail' post.id %}" class="post-link">
+            <h3 id="post-title-{{ post.id }}">{{ post.title }}</h3>
+            
+            {% if post.media_file %}
+                {% if post.media_file.url|lower|endswith:".mp4" or post.media_file.url|lower|endswith:".webm" %}
+                    <video controls id="post-file-{{ post.id }}">
+                        <source src="{{ post.media_file.url }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                {% else %}
+                    <img src="{{ post.media_file.url }}" alt="Media file" class="media-thumbnail" id="post-file-{{ post.id }}">
+                {% endif %}
+            {% endif %}
+            
+            <p id="post-content-{{ post.id }}"> {{ post.content|linebreaks }} </p>
+            
+        </a>
+        <div class="post-separator"></div>
+        <div class="post-actions">
+            <p class="comment-count">{{ post.comments.count }} Comment{{ post.comments.count|pluralize }}</p>
+    <!-- Botón de Like <!--
+                <a href="#" data-post-id="{{ post.id }}" class="like-button">
+                    {% if post.is_liked %}
+                        Unlike
+                    {% else %}
+                        Like
+                    {% endif %}
+                </a> 
+                <span id="like-count-{{ post.id }}">{{ post.likes_count }} Like{{ post.likes_count|pluralize }}</span>
+            <button data-post-id="{{ post.id }}" class="save-btn">
+                {% if post in request.user.savedcontent.saved_posts.all %}
+                    Unsave
+                {% else %}
+                    Save
+                {% endif %}
+            </button> 
+            {% if request.user == post.user %}
+             <div class="more-options-container">
+                <button class="more-options-button" data-post-id="{{ post.id }}" id="more-options-btn-{{ post.id }}">More Options</button>
+                <div class="options-container" id="options-container-{{ post.id }}" style="display:none;">
+                    <button class="edit-button" data-post-id="{{ post.id }}">Edit</button>
+                    <button class="delete-button" data-post-id="{{ post.id }}">Delete</button>
+                </div>
+            </div>
+        {% endif %}
+        </div>
+    </article>
     {% endfor %}
+</div>
 
-        {% for post in posts %}
-            <h2>{{ post.title }}</h2>
-            <p>{{ post.content }}</p>
-        {% endfor %}
+<div id="delete-confirmation" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+    <p>Are you sure you want to delete this?</p>
+    <div id="button-container" style="display: flex; justify-content: space-around;">
+        <button id="cancel-button" class="cancel-button">Cancel</button>
+        <button id="confirm-delete-button" class="btn delete-button">Delete</button>
+    </div>
+</div>
+<div id="edit-post-container" class="edit-post-container" style="display:none; border: 1px solid black;">
+    <form id="edit-post-form" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="edit-title">Title:</label>
+            <input type="text" id="edit-title" name="title" required="" style="border: 1px solid black;">
+        </div>
+        <div class="form-group">
+            <label for="edit-content">Text:</label>
+            <textarea id="edit-content" name="content" style="border: 1px solid black; width: 800px; min-height: 300px;">{{ post.content }}</textarea>
+        </div>
+        <div class="form-group">
+            <label for="edit-file-input">Attach file:</label>
+            <input type="file" id="edit-file-input" name="media_file" multiple accept="image/*,video/*">
+            <div id="current-file"></div> 
+            <input type="checkbox" id="remove-media-file" name="remove_media_file" value="true">
+            <label for="remove-media-file">Delete File</label>
+        </div>
+        <div class="edit-buttons-container">
+            <button type="submit" class="save-button">Save Changes</button>
+            <button type="button" id="cancel-edit-button" class="cancel-button">Cancel</button>
+        </div>
+        
+    </form>
+</div>
 
-{% endblock %}
+
+<script>
+/* SECCION DE VISTA PREVIA PARA EL CONTENIDO MULTIMEDIA EN EDICION. */
+
+document.addEventListener("DOMContentLoaded", function() {
+
+// Código para manejar la vista previa de imágenes/videos subidos
+const fileInput = document.getElementById('edit-file-input');
+const filePreview = document.getElementById('current-file');
+
+if (fileInput) {
+    fileInput.addEventListener('change', function(e) {
+        filePreview.innerHTML = '';  // Limpiar la vista previa anterior
+        const files = e.target.files;
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (file.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.alt = file.name;
+                    img.classList.add('preview-image');
+                    filePreview.appendChild(img);
+                } else {
+                    // Si no es una imagen, mostrar el nombre del archivo
+                    const div = document.createElement('div');
+                    div.textContent = file.name;
+                    filePreview.appendChild(div);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+});
 
 
+</script>
+
+
+<style>
+
+.post-link, .post-link:hover {
+    text-decoration: none;
+    color: inherit;
+    background-color: inherit;
+}
+
+.post-link h3, .post-link p, .post-link img {
+    color: inherit;
+    text-decoration: none;
+}
+
+.post-link:hover h3, .post-link:hover p, .post-link:hover img {
+    color: inherit;
+    text-decoration: none;
+}
+
+
+.edit-buttons-container {
+    display: flex;
+    justify-content: space-between; /* Esto separará los botones */
+    width: 100%; /* O un ancho específico si lo prefieres */
+    padding: 10px; /* Añade padding si es necesario */
+}
+
+.save-button {
+    color: white;
+    padding: 10px 20px;
+    background-color: rgb(234, 127, 127);
+    text-decoration: none;
+    border: none;
+    border-radius: 25px;
+    border: 1px solid #ffffff;
+    margin-bottom: 2px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    width: 150px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.save-button:hover {
+    background-color: rgb(234, 127, 127);
+    color: #000000;
+}
+
+
+.cancel-button {
+    color: white;
+    background-color: #000000;
+    padding: 10px 20px;
+    text-decoration: none;
+    border: none;
+    border-radius: 25px;
+    border: 1px solid #ffffff;
+    margin-bottom: 2px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    width: 100px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cancel-button:hover {
+    background-color: rgb(255, 255, 255);
+    color: #000000;
+    border: 1px solid #000000;
+}
+
+
+    .btn {
+        /* Suponiendo un fondo oscuro, pero puedes cambiarlo según tu diseño */
+        color: white;
+        padding: 5px 10px;
+        text-decoration: none;
+        border: none;
+        border-radius: 25px;
+        border: 1px solid #ffffff;
+        margin-bottom: 2px;
+    }
+
+    .btn:hover,
+    .btn.selected {
+        background-color: rgb(234, 216, 127);
+        color: #000000; /* Cambia el color del texto al pasar el mouse sobre él a un blanco apagado */
+        text-decoration: none; /* Esto quita el subrayado al pasar el mouse */
+    }
+
+
+.link-blanco {
+    color: white;
+    text-decoration: none; /* Opcional: esto eliminará el subrayado */
+}
+.link-blanco:hover {
+    color: white; /* Esto mantendrá el color blanco incluso cuando se pasa el cursor sobre el enlace */
+    text-decoration: underline; /* Opcional: esto subrayará el enlace al pasar el cursor */
+}
+
+
+.preview-image {
+    max-width: 100px;
+}
+
+.centrar-contenido {
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 20px;  /* Esto añadirá espacio debajo de cada post */
+    margin-top: 20px;  
+}
+
+.centrar-contenido .post {
+    background-color: #808080; 
+    padding: 20px;
+    border: 1px solid white; 
+    border-radius: 5px; 
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); 
+    width: calc((400px * 2) + 20px);
+    box-sizing: border-box;
+    margin-bottom: 50px;
+}
+
+.centrar-contenido .post-separator {
+    border-bottom: 1px solid white; /* línea blanca que separa el contenido de las acciones */
+    margin: 10px 0; /* espacio arriba y abajo de la línea */
+}
+.centrar-contenido .post-actions {
+    position: relative;
+}
+.centrar-contenido .post-actions button,
+.centrar-contenido .post-actions .like-button {
+    display: inline-block; 
+    margin: 0 10px; 
+    padding: 10px 20px;
+    background-color:  rgb(234, 216, 127); 
+    color: #000000; 
+    border: 1px solid white; 
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.centrar-contenido .post-actions button:hover,
+.centrar-contenido .post-actions .like-button:hover {
+    background-color: rgb(234, 127, 127); 
+}
+
+
+
+.centrar-contenido .post-actions .more-options-button {
+    display: inline-block;
+    margin: 0 10px;
+    padding: 10px 20px;
+    background-color: rgb(234, 216, 127);
+    color: #000000;
+    border: 1px solid white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.centrar-contenido .post-actions .more-options-button:hover {
+    background-color: rgb(234, 127, 127);
+}
+
+/* ... (tu CSS existente) ... */
+
+.more-options-container {
+    position: relative;
+    display: inline-block;
+}
+
+
+.options-container {
+    position: absolute;
+    width: 144px;
+    top: 100%;
+    left: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    background-color: #808080; 
+    border: 1px solid #ccc;
+    padding: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transform: translateX(10px);
+}
+
+.edit-button, .delete-button {
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.edit-button {
+    background-color: rgb(234, 216, 127);
+}
+
+.delete-button {
+    background-color: rgb(234, 127, 127);
+}
+
+.edit-button:hover, .delete-button:hover {
+    background-color: rgb(234, 127, 127);
+}
+
+.media-thumbnail {
+    width: 200px;
+    height: auto;
+}
+
+.edit-post-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    border: 1px solid #ccc;
+    z-index: 1000;  /* para asegurarse de que aparezca en la parte superior*/
+}
+
+
+</style>
+
+<script>
+$(document).ready(function() {
+    $('.like-button').click(function(e) {
+        e.preventDefault();
+        const postId = $(this).data("post-id");
+        const buttonElement = $(this);
+
+        fetch(`/like_post/${postId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.is_liked) {
+                buttonElement.text("Unlike");
+            } else {
+                buttonElement.text("Like");
+            }
+            const likesCount = data.likes_count;
+            $('#like-count-' + postId).text(likesCount + ' Like' + (likesCount !== 1 ? 's' : ''));
+        })
+        .catch(error => {
+            console.error("There was a problem with the fetch operation:", error.message);
+        });
+    });
+});
+
+
+    $('.save-btn').click(function() {
+        const postId = $(this).data("post-id");
+        fetch(`/post/${postId}/save/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.saved) {
+                $(this).text("Unsave");
+            } else {
+                $(this).text("Save");
+            }
+        });
+    });
+
+    $('.more-options-button').click(function(event){
+        event.stopPropagation();  // Detiene la propagación del evento
+        var post_id = $(this).data("post-id");
+        var options_container = $('#options-container-' + post_id);
+        options_container.toggle();  // Esto mostrará u ocultará el contenedor de opciones
+    });
+
+    $(document).on('click', function(event) {
+        $('.more-options-button').each(function() {
+            var post_id = $(this).data("post-id");
+            var $optionsContainer = $('#options-container-' + post_id);
+            var isClickInside = $optionsContainer.is(event.target) || $optionsContainer.has(event.target).length !== 0;
+
+            if (!isClickInside && $optionsContainer.is(':visible')) {
+                $optionsContainer.hide();
+            }
+        });
+    });
+
+    $('.delete-button').click(function(){
+        var post_id = $(this).data("post-id");
+        $('#delete-confirmation').data('post-id', post_id).show();  // guarda el post_id y muestra el cuadro de confirmación
+    });
+
+    $('#cancel-button').click(function(){
+        $('#delete-confirmation').hide();  // oculta el cuadro de confirmación
+    });
+
+    $('#confirm-delete-button').click(function(){
+        var post_id = $('#delete-confirmation').data('post-id');
+        $('#delete-confirmation').hide();  // oculta el cuadro de confirmación
+
+        // Aquí puedes hacer una solicitud AJAX para eliminar el post
+        $.ajax({
+            url: "{% url 'delete_post' 9999 %}".replace(9999, post_id),  // usa la URL que definiste para eliminar un post
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            success: function(response) {
+                // Recarga la página para reflejar la eliminación del post
+                location.reload();
+            },
+            error: function(response) {
+                console.log('Error:', response);
+            }
+        });
+    });
+
+    $('.edit-button').click(function() {
+    var post_id = $(this).data("post-id");
+    
+    $.ajax({
+        url: `/get_post_data/${post_id}/`,
+        method: 'GET',
+        success: function(response) {
+            $('#edit-title').val(response.title);
+            $('#edit-content').val(response.content);
+            $('#edit-post-container').data('post-id', post_id).show();
+        },
+        error: function(response) {
+            console.log('Error:', response);
+        }
+    });
+});
+
+$('#cancel-edit-button').click(function(){
+    $('#edit-post-container').hide();
+});
+
+$('#edit-post-form').submit(function(e){
+    e.preventDefault();
+    var post_id = $('#edit-post-container').data('post-id');
+    var new_title = $('#edit-title').val();
+    var new_content = $('#edit-content').val();
+    var media_file = $('#edit-file-input')[0].files[0];
+
+    var formData = new FormData();
+    formData.append('title', new_title);
+    formData.append('content', new_content);
+    if (media_file) {
+        formData.append('media_file', media_file);
+    }
+
+    if ($('#remove-media-file').prop('checked')) {
+        formData.append('remove_media_file', 'true');
+    }
+
+    $.ajax({
+        url: `/post/${post_id}/edit/`,
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                $('#post-title-' + post_id).text(response.title);
+                $('#post-container-' + post_id).html('<div id="post-content-' + post_id + '">' + response.content.replace(/\n/g, '<br>') + '</div>');
+                if (response.media_url) {
+                    var mediaElement;
+                    if (response.media_url.toLowerCase().endsWith('.mp4')) {
+                        mediaElement = `<video controls><source src="${response.media_url}" type="video/mp4">Your browser does not support the video tag.</video>`;
+                    } else {
+                        mediaElement = `<img src="${response.media_url}" alt="Media file" class="media-thumbnail">`;
+                    }
+                    $('#post-file-' + post_id).replaceWith(mediaElement);
+                } else {
+                    $('#post-file-' + post_id).replaceWith('');
+                }
+                $('#edit-post-container').hide();
+                location.reload();
+            } else {
+                console.error('Error del servidor:', response.error);
+            }
+        },
+        error: function(response) {
+            console.log('Error:', response);
+        }
+    });
+});
+
+
+
+</script>
+
+-->
+
+    
+    {% endblock %}
+    

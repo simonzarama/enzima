@@ -1,0 +1,81 @@
+{% extends 'base_user.html' %}
+{% load custom_filters %}
+{% load static %}
+
+
+{% block content %}
+
+        
+        <div class="centrar-post">
+            <form method="post" action="{% url 'add_resource' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="{{ form.title.id_for_label }}">Título:</label>
+                    <div class="title-container">
+                        {{ form.title }}
+                        <div class="post-options">
+                            <input type="file" id="file-input" name="files" multiple accept="image/*,video/*,application/*" style="display:none;"/>
+                            <button type="button" class="icon-button" onclick="document.getElementById('file-input').click();">
+                                <i class="far fa-image"></i>
+                            </button>
+                            <button type="button" class="icon-button">
+                                <i class="fas fa-link"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+        
+                <div class="file-preview" id="file-preview"></div>
+        
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}">Descripción:</label>
+                    {{ form.description }}
+                </div>
+        
+                <div class="form-group">
+                    <label for="{{ form.tags.id_for_label }}">Tag Comunidades:</label>
+                    {{ form.tags }}
+                </div>
+        
+                <button type="submit">Publicar</button>
+            </form>
+        </div>
+        
+        <script>
+            document.getElementById('file-input').addEventListener('change', function(e) {
+                const filePreview = document.getElementById('file-preview');
+                filePreview.innerHTML = '';  // Limpiar la vista previa anterior
+            
+                const files = e.target.files;
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const reader = new FileReader();
+            
+                    reader.onload = function(e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.alt = file.name;
+                        img.classList.add('preview-image');
+                        filePreview.appendChild(img);
+                    };
+            
+                    if (file.type.startsWith('image/')) {
+                        reader.readAsDataURL(file);
+                    } else {
+                        // Si no es una imagen, mostrar el nombre del archivo
+                        const div = document.createElement('div');
+                        div.textContent = file.name;
+                        filePreview.appendChild(div);
+                    }
+                }
+            });
+        </script>
+        
+        
+        
+        
+        
+        
+    
+{% endblock %}

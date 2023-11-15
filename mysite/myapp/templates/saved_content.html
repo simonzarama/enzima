@@ -1,0 +1,111 @@
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+
+
+    <h2>Contenido Guardado de {{ profile_user.username }}</h2>
+
+    <h3>Posts Guardados</h3>
+    {% if saved_items %}
+        <ul>
+            {% for saved_item in saved_items %}
+                <li>
+                    <a href="{% url 'post_detail' saved_item.content_object.id %}" class="post-link">
+                        <p>Publicado por: {{ saved_item.content_object.user.username }}</p>
+                        <h2>{{ saved_item.content_object.title }}</h2>
+                        <p>{{ saved_item.content_object.content }}</p>
+                    </a>
+                    <div class="post-actions">
+                        <p class="comment-count">{{ saved_item.content_object.comments.count }} comentarios</p>
+                        <a href="#" data-postid="{{ saved_item.content_object.id }}" class="like-button">
+                            {% if saved_item.content_object.is_liked %}
+                                Unlike
+                            {% else %}
+                                Like
+                            {% endif %}
+                        </a> {{ saved_item.content_object.likes_count }} Likes
+                        <!-- Tus otros botones: Guardar, Comentar -->
+                        <button data-post-id="{{ saved_item.content_object.id }}" id="save-btn">
+                            {% if saved_item.content_object in request.user.savedcontent.saved_items.all %}
+                                Unsave
+                            {% else %}
+                                Save
+                            {% endif %}
+                        </button>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>{{ profile_user.username }} no ha guardado ningún post aún.</p>
+    {% endif %}
+<!-- Campañas Guardadas -->
+<h3>Campañas Guardadas</h3>
+{% if saved_campaigns %}
+    <ul>
+        {% for saved_campaign in saved_campaigns %}
+            <li>
+                <a href="{% url 'campaign_detail' saved_campaign.content_object.id %}" class="post-link">
+                    <p>Publicado por: {{ saved_campaign.content_object.creator.username }}</p>
+                    <h2>{{ saved_campaign.content_object.title }}</h2>
+                    <p>{{ saved_campaign.content_object.description }}</p>
+                </a>
+                <div class="post-actions">
+                    <p class="comment-count">{{ saved_campaign.content_object.comments.count }} comentarios</p>
+                    <a href="#" data-campaignid="{{ saved_campaign.content_object.id }}" class="like-button">
+                        {% if saved_campaign.content_object.is_liked %}
+                            Unlike
+                        {% else %}
+                            Like
+                        {% endif %}
+                    </a> {{ saved_campaign.content_object.likes_count }} Likes
+                    <button data-campaign-id="{{ saved_campaign.content_object.id }}" id="save-campaign-btn">
+                        {% if saved_campaign.content_object in request.user.savedcampaigns.saved_items.all %}
+                            Unsave
+                        {% else %}
+                            Save
+                        {% endif %}
+                    </button>
+                    <!-- Añade aquí cualquier acción específica para campañas, como editar o eliminar si es necesario -->
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>{{ profile_user.username }} no ha guardado ninguna campaña aún.</p>
+{% endif %}
+
+<!-- Recursos Guardados -->
+<h3>Recursos Guardados</h3>
+{% if saved_resources %}
+    <ul>
+        {% for saved_resource in saved_resources %}
+            <li>
+                <a href="{% url 'resource_detail' saved_resource.content_object.id %}" class="post-link">
+                    <p>Publicado por: {{ saved_resource.content_object.creator.username }}</p>
+                    <h2>{{ saved_resource.content_object.title }}</h2>
+                    <p>{{ saved_resource.content_object.description }}</p>
+                </a>
+                <div class="post-actions">
+                    <p class="comment-count">{{ saved_resource.content_object.comments.count }} comentarios</p>
+                    <a href="#" data-resourceid="{{ saved_resource.content_object.id }}" class="like-button">
+                        {% if saved_resource.content_object.is_liked %}
+                            Unlike
+                        {% else %}
+                            Like
+                        {% endif %}
+                    </a> {{ saved_resource.content_object.likes_count }} Likes
+                    <button data-resource-id="{{ saved_resource.content_object.id }}" id="save-resource-btn">
+                        {% if saved_resource.content_object in request.user.savedresources.saved_items.all %}
+                            Unsave
+                        {% else %}
+                            Save
+                        {% endif %}
+                    </button>
+                    <!-- Añade aquí cualquier acción específica para recursos, como editar o eliminar si es necesario -->
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>{{ profile_user.username }} no ha guardado ningún recurso aún.</p>
+{% endif %}

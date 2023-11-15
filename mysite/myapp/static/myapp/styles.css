@@ -1,7 +1,17 @@
+
 body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-  padding: 0;
+  
+  background-image: url('/static/myapp/images/pattttulo.png');
+  background-repeat: repeat;
+  background-size: 25%;
+
+}
+
+/* Estilo para el título */
+h2 {
+  text-align: center; /* Centrado horizontal */
+  text-transform: uppercase; /* Convertir texto a mayúsculas */
+  color: #ffffff; /* Color de texto blanco */
 }
 
 .custom-header {
@@ -9,8 +19,10 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
-  background-color: #565484;  /* Cambia este color al que prefieras */
+  background-color: #252525;  /* Cambia este color al que prefieras */
 }
+
+
 
 .custom-logo, .custom-nav-links a {
   color: rgb(234, 127, 127);
@@ -37,4 +49,349 @@ body {
 .custom-search-btn {
   margin-left: 10px;
   padding: 5px 15px;
+}
+
+
+
+
+
+
+/* ESTO ES RELACIONADO CON LOS POSTS DE LAS COMUNIDADES */
+
+
+
+
+.post-link {
+  display: block;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  color: #ffffff;
+  text-decoration: none;
+  transition: background-color 0.3s;
+}
+
+.post-link:hover {
+  background-color: #f5f5f5;
+}
+
+.post-actions {
+  display: flex;
+  flex-wrap: nowrap; /* Asegura que los elementos no se envuelvan */
+  align-items: center;
+  gap: 10px;
+}
+
+.comment-count {
+  margin: 0; /* elimina márgenes predeterminados de <p> */
+}
+
+
+/* Estilo general */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* Centrar el contenido */
+.centrar-contenido {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 20px; /* Un espacio adicional alrededor del contenido */
+}
+
+
+
+
+
+
+
+/* ESTE ES EL FORMULARIO DE CREAR COMUNIDAD */
+
+
+
+
+
+.centrar-contenido form {
+  background-color: #808080; /* Gris */
+  padding: 20px;
+  border: 1px solid white; /* Borde blanco y delgado */
+  border-radius: 5px; /* Esquinas redondeadas */
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Sombra sutil alrededor del recuadro */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.centrar-contenido form button {
+  display: block; /* Esto permite que el botón ocupe todo el ancho posible */
+  margin: 10px auto; /* Esto centrará el botón en el medio del formulario */
+  padding: 10px 20px; /* Espacio alrededor del texto del botón */
+  background-color:  rgb(234, 216, 127); /* Gris */
+  color: #000000; /* Color del texto del botón */
+  border: 1px solid white; /* Borde blanco y delgado */
+
+  cursor: pointer;
+  transition: background-color 0.2s; /* Transición suave al cambiar el color de fondo */
+}
+
+.centrar-contenido form button:hover {
+  background-color: rgb(234, 127, 127); /* Color de fondo del botón al pasar el mouse por encima */
+}
+
+
+
+
+
+
+
+
+/* ACA ABAJO ESTÄN LOS BOTONES DE HOME */
+
+
+
+
+
+
+.center-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.rectangle-container {
+  width: calc((200px * 4) + 60px); /* Ajuste al ancho para acomodar 4 botones de 200px más el espaciado entre ellos */
+  display: flex;
+  flex-direction: row; /* Cambiado de column a row */
+  justify-content: space-between;
+  align-items: center;
+  background-color: #808080;
+  padding: 15px;
+  border: 0px solid white;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  position: relative;
+}
+
+.community-button a {
+  width: 150px; /* Ajuste al ancho del botón */
+  height: 50px; /* Ajuste a la altura del botón */
+  background-color: #acacac;
+  color: #000000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  text-decoration: none; 
+  
+  padding: 10px 20px;
+  transition: background-color 0.2s;
+}
+
+.community-button a:hover {
+  background-color: rgb(234, 216, 127);
+}
+
+
+
+.community-line {
+  display: flex;  /* Hace que los hijos se dispongan de forma horizontal */
+  justify-content: center;  /* Centra los botones horizontalmente */
+  margin-bottom: 10px;  /* Añade un espacio entre las líneas de botones */
+}
+
+.highlight-line {
+  width: 150px; /* Ancho del botón */
+  height: 4px;  /* Altura de la línea */
+  background-color: rgb(234, 216, 127); /* Color de la línea */
+  position: absolute;
+  bottom: 12px;
+  transition: left 0.3s ease-out; /* Transición suave para el desplazamiento */
+  left: 15px; 
+}
+
+
+/* Estilo para el botón especial */
+.special-button a {
+  width: calc((200px * 2) + 20px); /* Haciéndolo igual de largo al botón 6 */
+  height: 50px; /* Altura especificada */
+  border-radius: 0;
+  background-color: rgb(234, 216, 127); /* Sin bordes suavizados */
+  /* Si quieres usar una imagen en lugar del color de fondo, comenta o elimina la línea de color de fondo y descomenta la siguiente: */
+  /* background-image: url('ruta-de-tu-imagen-especial'); */
+  color: black; 
+  background-size: cover;
+  
+  
+}
+
+.special-button a:hover {
+  text-decoration: underline;
+}
+
+.profile-image {
+  border-radius: 50%; /* Esto hará que la imagen sea circular */
+  overflow: hidden;   /* Esto es en caso de que la imagen original no sea un cuadrado */
+  width: 40px;       /* Mantenemos el mismo ancho que especificaste */
+  height: 40px;      /* Aseguramos que sea del mismo tamaño en altura y anchura */
+}
+
+
+.profile-image-big img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%; 
+  object-fit: cover;  /* Esta propiedad asegura que la imagen cubra el contenedor sin perder su relación de aspecto. */
+}
+
+
+
+/* RESULTADOS DE BUSQUEDA */
+.results-container {
+  color: white;
+  padding: 15px; /* Espacio interno alrededor del contenido */
+}
+
+.results-container ul {
+  list-style: none; /* Esto elimina el marcador del <ul> */
+  padding: 0; /* Esto elimina cualquier padding predeterminado que pudiera tener el <ul> */
+  margin: 0; /* Esto elimina cualquier margen predeterminado que pudiera tener el <ul> */
+}
+
+.results-container a {
+  display: contents;
+  width: 700px; /* Establece el ancho del botón */
+  text-align: center; /* Centra el texto dentro del botón */
+  margin: 0 auto 2px auto; /* Centra el botón dentro de su contenedor y proporciona espacio en la parte inferior */
+  color: white;
+  background-color: transparent;
+  padding: 5px 10px;
+  text-decoration: none;
+  border: 1px solid #ffffff;
+  border-radius: 25px;
+  transition: background-color 0.3s; /* Transición suave del color de fondo */
+}
+
+.results-container a:hover {
+  background-color: rgb(234, 216, 127);
+  color: #000000; /* Cambia el color del texto al pasar el mouse sobre él a un blanco apagado */
+  text-decoration: none; /* Esto quita el subrayado al pasar el mouse */
+}
+
+/* Para el contenedor de cada resultado de usuario */
+/* Para el contenedor de cada resultado de usuario, que ahora es un botón */
+.user-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  width: 500px;
+  border: 1px solid #ffffff;
+  border-radius: 50px; 
+  margin: 0 auto 2px auto; 
+  background-color: transparent;
+  transition: background-color 0.3s;
+  text-decoration: none;
+  color: white; 
+}
+
+
+/* Para la imagen del perfil del usuario */
+.user-profile-pic {
+  border-radius: 50%;
+  overflow: hidden;
+  width: 45px;
+  height: 45px;
+  margin-right: 5px;  /* Espacio entre la foto de perfil y el nombre de usuario */
+  flex-shrink: 0;  /* Aseguramos que la imagen no se reduzca */
+}
+
+/* Para el nombre de usuario */
+.user-name {
+  margin-right: 10px;  /* Espacio entre el nombre de usuario y el botón de "Follow" */
+  margin-left: 5px;  /* Espacio entre la foto de perfil y el nombre de usuario */
+  flex-grow: 1;  /* Esto hará que el nombre del usuario ocupe todo el espacio disponible entre la imagen y el botón */
+  text-align: left;  /* Alineación del texto a la izquierda */
+}
+
+/* Para el botón de "follow" */
+.follow-btn {
+  display: block;
+  width: 150px;
+  padding: 5px 15px;
+  border: 1px solid #ffffff;
+  border-radius: 25px;
+  background-color: transparent;
+  text-decoration: none;
+  color: white;
+  width: auto; /* Cambiamos el ancho a auto para que sea más pequeño */
+  transition: background-color 0.3s;
+  flex-shrink: 0; /* Aseguramos que el botón no se reduzca */
+}
+.follow-btn:hover {
+  background-color: rgb(234, 216, 127);
+  color: #000000;
+}
+
+.results-container .follow-btn {
+  display: block;
+  width: 150px;
+  padding: 5px 15px;
+  border: 1px solid #ffffff;
+  border-radius: 25px;
+  background-color: transparent;
+  text-decoration: none;
+  color: white;
+  transition: background-color 0.3s;
+  flex-shrink: 0; 
+}
+
+.results-container .follow-btn:hover {
+  background-color: rgb(234, 216, 127);
+  color: #000000;
+}
+
+/* Para desactivar el borde y el hover del enlace con el nombre de usuario */
+.results-container .user-name {
+  border: none;  /* Elimina el borde */
+  transition: none;  /* Desactiva la transición */
+  width: auto;  /* Asegura que el ancho no esté fijo */
+  text-align: left; 
+}
+
+.results-container .user-name:hover {
+  background-color: transparent;  /* Elimina el cambio de color de fondo */
+  color: white;  /* Mantiene el color de texto original */
+}
+
+/* Estilos para el contenedor individual de cada post */
+.post-container {
+  width: 600px;
+  margin: 20px auto; /* 20px de margen superior e inferior, centrado horizontalmente */
+  padding: 15px;
+  background-color: rgba(255, 255, 255, 0); /* Color de fondo semitransparente */
+  border: 1px solid #ffffff; /* Borde blanco */
+  border-radius: 10px; /* bordes redondeados */
+  overflow: hidden; /* para asegurarse de que todo esté contenido */
+}
+
+.post-container h3 {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.post-container p {
+  background-color: #ffffff00; /* Color de fondo blanco */
+  width: 500px;
+  margin: 0 auto; /* centra el párrafo en el contenedor */
+  padding: 10px;
+  height: auto; /* para que el contenido ajuste automáticamente la altura */
+  overflow: hidden; /* corta cualquier contenido que exceda el contenedor */
+  text-overflow: ellipsis; /* esto corta el texto con puntos suspensivos si excede */
+  white-space: nowrap; /* esto previene que el texto se ajuste a la siguiente línea */
+  border-radius: 10px;
 }

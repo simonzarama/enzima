@@ -1,0 +1,26 @@
+{% extends 'base_user.html' %}
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+
+{% block content %}
+    <br>
+    <br>
+
+    <h2>Resultados de búsqueda de usuarios para "{{ query }}"</h2>
+
+    {% for user in users %}
+        <div class="search-user-result">
+            <img src="{% static 'myapp/images/default_profile_icon.png' %}" alt="Perfil" class="search-user-profile-image">
+            <div class="search-user-info">
+                <h2><a href="{% url 'profile' username=user.username %}" class="search-user-username">{{ user.username }}</a></h2>
+                <p>Email: {{ user.email }}</p>
+                <!-- Puedes agregar más información relevante sobre el usuario aquí -->
+            </div>
+            <a href="#" class="search-user-follow-btn">Follow</a>
+        </div>
+    
+{% endfor %}
+
+
+
+{% endblock %}

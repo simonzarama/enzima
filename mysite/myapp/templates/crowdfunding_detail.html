@@ -1,0 +1,918 @@
+
+
+
+{% extends 'base_user.html' %}
+{% load custom_filters %}
+{% load static %}
+
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+{% block content %}
+
+
+<br>
+<br>
+<br>
+<br>
+
+
+<div class="centrar-contenido">
+    <div class="content-container">
+        <article class="campaign">
+    
+            <span class="author-tags">By <a href="{% url 'profile' campaign.creator.username %}" class="link-blanco">{{ campaign.creator.username }}</a></span>
+
+            {% if associated_communities %}
+                <span> on </span>
+                {% for community in associated_communities %}
+                    <span><a href="{% url 'view_community' community.name %}" class="link-blanco">{{ community.name }}</a>{% if not forloop.last %}, {% endif %}</span>
+                {% endfor %}
+            {% endif %}
+        
+            <!-- ... código existente ... -->
+        
+            <div class="campaign-content">
+                <h3 id="campaing-title">{{ campaign.title }}</h3>
+                <br>
+                <br>
+                <div class="media-container">
+                    {% if campaign.media_file %}
+                        {% if campaign.media_file.url|lower|endswith:".mp4" or campaign.media_file.url|lower|endswith:".webm" %}
+                            <video controls>
+                                <source src="{{ campaign.media_file.url }}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        {% else %}
+                            <img src="{{ campaign.media_file.url }}" alt="Media de la campaña">
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <p id="campaign-description">{{ campaign.description|linebreaks }}</p>
+            </div>
+            <br>
+            
+            <div class="donation-section">
+
+                <!-- Contenedor para Barra de Progreso, Info y Botón -->
+                <div class="progress-button-wrapper">
+            
+                    <!-- Contenedor para Barra de Progreso y Info -->
+                    <div class="progress-and-info">
+            
+                        <!-- Barra de Progreso de Donaciones -->
+                        <div class="progress-bar-container">
+                            <div class="progress-bar">
+                                <div class="progress" id="campaign-progress"></div>
+                            </div>
+                        </div>
+            
+                        <!-- Información de Donaciones -->
+                        <div class="donation-info">
+                            <p><span class="amount">${{ campaign.total_donations }}</span> de ${{ campaign.target_amount }} recaudados</p>
+                            <p><span class="donors">{{ campaign.total_donors }}</span> donantes</p>
+                        </div>
+            
+                    </div> <!-- Fin de Contenedor para Barra de Progreso y Info -->
+            
+                    <!-- Botón Donate -->
+                    <a href="{% url 'donate_view' campaign.id %}" class="donate-button">Donate</a>
+                    
+                </div> <!-- Fin de Contenedor para Barra de Progreso, Info y Botón -->
+            
+            </div> <!-- Fin de Contenedor Principal -->
+            
+            
+        <div class="campaign-separator"></div>
+        <div class="campaign-actions">
+
+            <!-- Conteo de Comentarios -->
+            <p class="comment-count" id="comment-count-{{ campaign.id }}">
+                {{ campaign.comments.count }} Comentario{{ campaign.comments.count|pluralize }}
+            </p>
+            
+            <!-- Botón de Like -->
+            <a href="#" data-campaignid="{{ campaign.id }}" class="c-btn c-btn-like like-button"> 
+                {{ campaign.is_liked|yesno:"Unlike,Like" }}
+            </a>
+            
+
+            <!-- Conteo de Likes -->
+            <span id="like-count-{{ campaign.id }}">{{ campaign.likes_count }} Like{{ campaign.likes_count|pluralize }}</span>
+
+
+            <!-- Botón de Save -->
+            <button 
+            data-content-type-slug="campaign" 
+            data-content-id="{{ campaign.id }}" 
+            class="c-btn c-btn-save save-button">
+                {% if is_saved %}
+                    Unsave
+                {% else %}
+                    Save
+                {% endif %}
+        </button>
+        
+            <!-- Botón para Compartir -->
+            <button onclick="copyToClipboard(window.location.href)" class="c-btn c-btn-share">Compartir</button>
+
+            <!-- Botón de Más Opciones (que ya está implementado) -->
+            {% if request.user == campaign.creator %}
+                <div class="more-options-container">
+                    <button class="c-btn c-btn-more" data-campaign-id="{{ campaign.id }}" id="more-options-btn-{{ campaign.id }}">Más opciones</button>
+                    <div class="options-container" id="options-container-{{ campaign.id }}" style="display:none;">
+                        <button class="c-btn c-btn-edit" data-campaign-id="{{ campaign.id }}" id="edit-campaign-button">Editar</button>
+                        <button class="c-btn c-btn-delete" data-campaign-id="{{ campaign.id }}">Eliminar</button>
+                    </div>
+                </div>
+            {% endif %}
+
+        </div>
+
+        <div class="comment-section">
+            {% if campaign and campaign.id %}
+            <!-- Inicio del formulario para agregar un comentario -->
+            <form method="post" action="{% url 'add_campaign_comment' campaign.id %}" id="comment-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="comment_text">Add Comment:</label><br>
+                    <textarea id="comment_text" name="comment_text" rows="4" cols="50"></textarea>
+                    <button type="submit">Post Comment</button> <!-- Botón para enviar el formulario -->
+                </div>
+            </form>
+            <!-- Fin del formulario -->
+            {% endif %}
+        
+            <h4>Comments:</h4>
+            {% for comment in campaign.comments.all %}
+            <div class="comment" id="comment-{{ comment.id }}">
+                <p>By 
+                    {% if comment.user and comment.user.username %}
+                        <a href="{% url 'profile' comment.user.username %}" class="link-blanco">{{ comment.user.username }}</a>
+                    {% else %}
+                        {{ comment.user.username }}
+                    {% endif %}
+                </p>
+                <p>{{ comment.text }}</p>
+                {% if request.user == comment.user %}
+                    <div class="edit-buttons-container">
+                        <a href="#" class="edit-comment-button text-button" data-comment-id="{{ comment.id }}">
+                            <i class="fa fa-edit"></i> Edit
+                        </a>
+                        <a href="#" class="delete-comment-button text-button" data-comment-id="{{ comment.id }}">
+                            <i class="fa fa-trash"></i> Delete
+                        </a>
+                    </div>
+                {% endif %}
+            </div>     
+            {% endfor %}
+        </div>
+        
+        
+        
+        <!-- Modal para editar comentarios -->
+        <div id="edit-comment-modal" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+            <textarea id="edit-comment-textarea" rows="4" cols="50"></textarea>
+            <div id="edit-button-container" style="display: flex; justify-content: space-around; margin-top: 10px;">
+                <button id="cancel-edit-button" class="cancel-button">Cancel</button>
+                <button id="save-edit-comment-button" class="save-button">Save</button>
+            </div>
+        </div>
+        
+        <!-- Modal para confirmar la eliminación de comentarios -->
+        <div id="delete-comment-modal" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+            <p>Are you sure you want to delete this comment?</p>
+            <div id="delete-button-container" style="display: flex; justify-content: space-around; margin-top: 10px;">
+                <button id="cancel-delete-button" class="cancel-button">Cancel</button>
+                <button id="confirm-delete-button" class="save-button">Delete</button>
+            </div>
+        </div>
+        
+</div>  <!-- Este es el cierre de div para la sección de comentarios -->
+</article>
+</div>
+
+
+
+<div id="delete-confirmation" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+    <p>Are you sure you want to delete this?</p>
+    <div id="button-container" style="display: flex; justify-content: space-around;">
+        <button id="cancel-button" class="cancel-button">Cancel</button>
+        <button id="confirm-post-delete-button" class="btn delete-button" data-community-name="{{ post.community.name }}">Delete</button>
+    </div>
+</div>
+
+
+<div id="edit-campaign-container" class="edit-campaign-container" style="display:none; border: 1px solid black;">
+    <form id="edit-campaign-form" method="post" enctype="multipart/form-data" data-action="{% url 'update_campaign_ajax' campaign.id %}">
+
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="edit-title">Title:</label>
+            <input type="text" id="edit-title" name="title" required="" value="{{ campaign.title }}" style="border: 1px solid black;">
+        </div>
+        <div class="form-group">
+            <label for="edit-description">Description:</label>
+            <textarea id="edit-description" name="description" style="border: 1px solid black; width: 800px; min-height: 300px;">{{ campaign.description }}</textarea>
+        </div>
+        <div class="form-group">
+            <label for="edit-file-input">Attach file:</label>
+            <input type="file" id="edit-file-input" name="media_file" multiple accept="image/*,video/*">
+            <div id="current-file">
+                {% if current_media_filename %}
+                    Current File: {{ current_media_filename }}
+                {% endif %}
+            </div>
+            <input type="checkbox" id="remove-media-file" name="remove_media_file" value="true">
+            <label for="remove-media-file">Delete File</label>
+        </div>
+        <div class="edit-buttons-container">
+            <button type="submit" class="save-changes-button">Save Changes</button>
+            <button type="button" id="cancel-edit-campaign-button" class="cancel-button">Cancel</button>
+        </div>
+    </form>
+</div>
+
+
+
+    <script>
+        // CODIGO PARA CALCULAR LAS DONACIONES EN LA BARRA
+        document.addEventListener('DOMContentLoaded', function() {
+        var progress = document.getElementById("campaign-progress");
+        if (progress) {
+            progress.style.width = "{{ donation_progress }}%";
+        }
+    });
+    </script>
+
+
+    <script>
+        // CODIGO DEL BOTÖN COMPARTIR 
+        function copyToClipboard(text) {
+            var textarea = document.createElement("textarea");
+            textarea.textContent = text;
+            textarea.style.position = "fixed";
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                alert('Enlace copiado al portapapeles!');
+            } catch (err) {
+                console.warn('No se pudo copiar', err);
+            } finally {
+                document.body.removeChild(textarea);
+            }
+        }
+    </script>
+    
+    
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var contentElements = document.querySelectorAll('.post-link p:last-child');
+            contentElements.forEach(function(contentElement) {
+                var linkedContent = Autolinker.link(contentElement.innerHTML);
+                contentElement.innerHTML = linkedContent;
+            });
+        });
+        </script>
+
+<script>
+            // Funcionalidad de "like"
+            document.querySelectorAll('.like-button').forEach(button => {
+    button.addEventListener('click', function(e) {
+        e.preventDefault();
+        const campaignId = this.getAttribute('data-campaignid');
+        const buttonElement = this;
+
+        fetch(`/like_campaign/${campaignId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.is_liked) {
+                buttonElement.textContent = "Unlike";
+            } else {
+                buttonElement.textContent = "Like";
+            }
+            const likesCount = data.likes_count;
+            document.querySelector('#like-count-' + campaignId).textContent = 
+                likesCount + ' Like' + (likesCount !== 1 ? 's' : '');
+        })
+        .catch(error => {
+            console.error("There was a problem with the fetch operation:", error.message);
+        });
+    });
+});
+
+</script>
+
+<script>
+   
+// Funcionalidad de "guardar"
+
+document.querySelectorAll('.save-button').forEach(button => {
+    button.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        const contentId = this.getAttribute('data-content-id');
+        const contentTypeSlug = this.getAttribute('data-content-type-slug');
+        
+        // Imprimir los valores para depuración
+        console.log('Content ID:', contentId);
+        console.log('Content Type Slug:', contentTypeSlug);
+        
+        fetch(`/campaign/${contentId}/save/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            this.textContent = data.saved ? "Unsave" : "Save";
+        });
+    });
+});
+
+
+</script>
+
+
+<script>
+
+    
+                    // Funcionalidad de "más opciones"
+        document.querySelectorAll('.c-btn-more').forEach(button => {
+            button.addEventListener('click', function(event) {
+                console.log('Botón de más opciones clickeado');
+                event.stopPropagation();
+                var optionsContainer = document.querySelector('#options-container-' + button.getAttribute('data-campaign-id'));
+                console.log(optionsContainer);
+                optionsContainer.style.display = optionsContainer.style.display === 'none' ? '' : 'none';
+            });
+        });
+
+        document.addEventListener('click', function(event) {
+            document.querySelectorAll('.c-btn-more').forEach(button => {
+                var optionsContainer = document.querySelector('#options-container-' + button.getAttribute('data-campaign-id'));
+                var isClickInside = optionsContainer.contains(event.target);
+                if (!isClickInside && optionsContainer.style.display !== 'none') {
+                    optionsContainer.style.display = 'none';
+                }
+            });
+        });
+        $(document).ready(function() {
+    // Al hacer clic en el botón de eliminar
+    $('.c-btn-delete').click(function() {
+        var campaign_id = $(this).data("campaign-id");
+        $('#delete-comment-modal').data('campaign-id', campaign_id).show(); // guarda el campaign_id y muestra el cuadro de confirmación
+    });
+
+    // Al hacer clic en el botón de cancelar la eliminación
+    $('#cancel-delete-button').click(function() {
+        $('#delete-comment-modal').hide();  // oculta el cuadro de confirmación
+    });
+
+    // Al confirmar la eliminación de la campaña
+    $('#confirm-delete-button').click(function() {
+        var campaign_id = $('#delete-comment-modal').data('campaign-id');
+        var redirect_url = "{% url 'home' %}";  // genera la URL de redirección a la página principal
+        $('#delete-comment-modal').hide();  // oculta el cuadro de confirmación
+
+        $.ajax({
+            url: "{% url 'delete_campaign' 9999 %}".replace(9999, campaign_id), // reemplaza 9999 con el ID de la campaña
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}', // token CSRF para la seguridad
+            },
+            success: function(response) {
+                // Redirige a la página principal después de eliminar la campaña
+                window.location.href = redirect_url;
+            },
+            error: function(response) {
+                console.log('Error:', response); // muestra un error en la consola en caso de que haya un problema
+            }
+        });
+    });
+});
+
+</script>
+
+<script> 
+// Código para manejar la edición de la campaña
+let editForm = document.getElementById('edit-campaign-form');
+editForm.addEventListener('submit', function(event) {
+    event.preventDefault();
+    
+    let formData = new FormData(editForm);
+    let formActionURL = editForm.getAttribute('data-action');
+    
+    fetch(formActionURL, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            // Actualiza la vista según sea necesario
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Hubo un error:', error);
+    });
+});
+
+$(document).ready(function() {
+    console.log("Document ready!");
+
+    $('.edit-comment-button').click(function(e) {
+        e.preventDefault(); // Previene la recarga de la página al hacer click
+
+        let commentId = $(this).attr('data-comment-id');
+        let commentText = $(`#comment-${commentId} p:nth-child(2)`).text(); // Asumo que el comentario es el segundo párrafo en el div del comentario.
+
+        $('#edit-comment-textarea').val(commentText);
+        $('#save-edit-comment-button').attr('data-comment-id', commentId);
+        $('#edit-comment-modal').show();
+    });
+
+    $('.delete-comment-button').click(function(e) {
+        e.preventDefault(); // Previene la recarga de la página al hacer click
+
+        let commentId = $(this).attr('data-comment-id');
+        $('#confirm-delete-button').attr('data-comment-id', commentId);
+        $('#delete-comment-modal').show();
+    });
+
+    $('#cancel-edit-button').click(function() {
+        $('#edit-comment-modal').hide();
+    });
+
+    $('#save-edit-comment-button').click(function() {
+        let commentId = $(this).attr('data-comment-id');
+        let newCommentText = $('#edit-comment-textarea').val();
+
+        $.ajax({
+            url: `/campaign/comment/${commentId}/edit/`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            data: {
+                'text': newCommentText
+            },
+            success: function(response) {
+                if (response.success) {
+                    $(`#comment-${commentId} p:nth-child(2)`).text(response.text);
+                    $('#edit-comment-modal').hide();
+                } else {
+                    console.error('Error del servidor:', response.error);
+                }
+            },
+            error: function(response) {
+                console.log('Error:', response);
+            }
+        });
+    });
+
+    $('#cancel-delete-button').click(function() {
+        $('#delete-comment-modal').hide();
+    });
+
+    $('#confirm-delete-button').click(function() {
+        let commentId = $(this).attr('data-comment-id');
+
+        $.ajax({
+            url: `/campaign/comment/${commentId}/delete/`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            success: function(response) {
+                if (response.success) {
+                    $(`#comment-${commentId}`).remove();
+                    $('#delete-comment-modal').hide();
+                } else {
+                    console.error('Error del servidor:', response.error);
+                }
+            },
+            error: function(response) {
+                console.log('Error:', response);
+            }
+        });
+    });
+});
+
+</script>
+
+
+<script>
+
+// PUBLCIAR COMMENT
+$(document).ready(function() {
+    $('#comment-form').on('submit', function(e) {
+        e.preventDefault();
+
+        $.ajax({
+            url: $(this).attr('action'),
+            method: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                if (response.success) {
+                    // Crear el comentario y agregarlo al DOM
+                    var newComment = `
+                        <div class="comment">
+                            <p>By <span class="link-blanco">${response.comment.username}</span></p>
+                            <p>${response.comment.text}</p>
+                        </div>
+                    `;
+                    // Agregar el comentario al final
+                    $('.comment-section').append(newComment);
+                    $("#comment_text").val("");
+
+                } else {
+                    alert('Error: ' + response.error);
+                }
+            },
+            error: function(response) {
+                console.error('Error:', response);
+            }
+        });
+    });
+});
+
+    
+</script>
+
+
+
+<style>
+
+.progress-and-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.donation-info p {
+    margin: 3px 0;
+   
+    
+}
+
+.progress-bar-container {
+    margin-bottom: 30px;  /* Añadir 10px de margen inferior */
+}
+
+
+.donate-button {
+    width: 150px;
+    height: 50px;
+    background-color: rgb(97, 171, 128);
+    color: white;
+    border: none;
+    margin-top: 40px;
+    border-radius: 4px;
+    margin-left: 10px; /* Espacio entre el botón y la barra */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.donation-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.progress-button-wrapper {
+    margin: 40px;
+    display: flex;
+    align-items: center;
+    gap: 200px; /* Separación entre el contenedor y el botón */
+    
+}
+
+.progress-bar {
+    height: 20px;
+    width: 320%; /* Puedes ajustar el ancho según necesites */
+    background-color: lightgray;
+    border-radius: 4px;
+}
+
+.campaign-content {
+    border: 1px solid white;
+    background-color: transparent;
+    border-radius: 5px;
+    padding: 10px; /* Puedes ajustar este valor según tus necesidades */
+}
+
+.progress {
+    height: 100%;
+    width: 60%; /* Puedes ajustar el ancho basado en el porcentaje de progreso */
+    background-color: green;
+    border-radius: 4px;
+}
+
+#campaing-title {
+    text-align: center;
+}
+
+/* Esto hará que el texto sea blanco */
+body {
+    color: white;
+}
+
+
+/* Estilo para el contenedor */
+.content-container {
+    max-width:  calc((400px * 2) + 40px);
+    background-color: #808080;  /* Esto es gris, pero puedes ajustar el tono si lo prefieres */
+    padding: 20px;  /* Espacio interno para que el contenido no quede pegado a los bordes */
+    border-radius: 10px;  /* Bordes redondeados para el contenedor */
+    margin: 20px 0;  /* Espacio exterior arriba y abajo del contenedor para separarlo de otros elementos */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);  /* Una sombra sutil para darle algo de profundidad */
+}
+
+/* Si hay algún enlace que no esté apareciendo en blanco (p.ej. debido a los estilos del navegador), puedes forzarlo a que sea blanco así */
+a, a:visited {
+    color: white;
+}
+
+
+.campaign-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px; /* Para un poco de espacio entre los elementos */
+}
+
+
+.post-link, .post-link:hover {
+    text-decoration: none;
+    color: inherit;
+    background-color: inherit;
+}
+
+.post-link h3, .post-link p, .post-link img {
+    color: inherit;
+    text-decoration: none;
+}
+
+.post-link:hover h3, .post-link:hover p, .post-link:hover img {
+    color: inherit;
+    text-decoration: none;
+}
+
+
+
+.media-thumbnail {
+    width: 200px;
+    height: auto;
+}
+
+.edit-post-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    border: 1px solid #ccc;
+    z-index: 1000;  /* para asegurarse de que aparezca en la parte superior*/
+}
+
+
+
+    .edit-comment-button {
+        margin-right: 20px;  /* Ajusta el valor según lo necesites */
+    }
+    
+    .delete-comment-button {
+        margin-left: 20px;  /* Ajusta el valor según lo necesites */
+    }
+    
+    
+    .link-blanco {
+        color: white;
+        text-decoration: none; /* Opcional: esto eliminará el subrayado */
+    }
+    .link-blanco:hover {
+        color: white; /* Esto mantendrá el color blanco incluso cuando se pasa el cursor sobre el enlace */
+        text-decoration: underline; /* Opcional: esto subrayará el enlace al pasar el cursor */
+    }
+    
+    
+    /* Estilo general */
+    .centrar-contenido {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        margin: 20px;
+    }
+    
+    /* Estilo para el post y la sección de comentarios */
+    .centrar-contenido .post,
+    .centrar-contenido .comment-section {
+        background-color: #808080;
+        
+        border: 1px solid white;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        width: calc((400px * 2) + 14px);
+        box-sizing: border-box;
+        margin-bottom: 50px;
+    }
+    
+    .centrar-contenido .comment-section {
+           background-color: #808080;
+    padding: 20px;
+    border: 1px solid white;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 800px;
+    box-sizing: border-box;
+    margin-bottom: 50px;
+}
+    /* Estilo para el contenedor de medios */
+    .media-container video,
+    .media-container img {
+        max-width: 400px;
+        height: auto;
+    }
+    
+    
+    .author-tags {
+    display: block; /* Hace que el span se comporte como un bloque y permita margen inferior */
+    margin-bottom: 10px; /* Ajusta el margen inferior al valor deseado */
+}
+
+/* Si deseas que el margen aplique solo cuando siga contenido después, puedes usar el selector de hermano adyacente */
+.author-tags + .campaign-content {
+    margin-top: 10px; /* Ajusta el margen superior del contenido de la campaña */
+}
+
+
+
+    .centrar-contenido .comment-section form {
+        max-width: none; /* Elimina el ancho máximo */
+        width: calc((400px * 2) - 20); /* Establece el ancho deseados */
+    }
+    
+    
+    /* Estilo para la sección de comentarios */
+    .centrar-contenido .comment-section .form-group,
+    .centrar-contenido .comment-section textarea {
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .centrar-contenido .comment-section button {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .centrar-contenido .comment-section h4,
+    .centrar-contenido .comment {
+        border-top: 1px solid white;
+        padding-top: 10px;
+        margin-top: 10px;
+        padding-right: 20px;
+        box-sizing: border-box;
+    }
+
+/* Estilo para los botones de campaña */
+.campaing-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.c-btn {
+    padding: 10px 20px;
+    background-color: none;
+    border: 1px solid white;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.c-btn-like,
+.c-btn-save,
+.c-btn-share,
+.c-btn-more {
+   
+    color: white;
+    background-color: #808080;
+}
+
+.c-btn-like:hover,
+.c-btn-save:hover,
+.c-btn-share:hover,
+.c-btn-more:hover {
+    background-color: rgb(255, 255, 255);
+    color: #000000;
+    border: 1px solid #000000;
+}
+
+
+/* Estilo para el contenedor de más opciones */
+.campaing-buttons .more-options-container {
+    position: relative;
+    display: inline-block;
+}
+
+.campaing-buttons .options-container {
+    position: absolute;
+    width: 144px;
+    top: 100%;
+    left: 50%;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    
+    border: 1px solid #ccc;
+    padding: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transform: translateX(-50%);
+}
+
+/* Estilo para el botón de la sección de comentarios */
+.centrar-contenido .comment-section button {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.campaign-actions {
+    margin-bottom: 20px;
+}
+
+    
+.campaign-actions .c-btn {
+    margin-left: 15px;
+    margin-right: 15px;
+}
+
+:root {
+    --campaign-action-margin: 20px; /* Ajusta este valor según necesites */
+}
+
+.campaign-actions > * {
+    margin-left: var(--campaign-action-margin);
+    margin-right: var(--campaign-action-margin);
+}
+
+.campaign-actions {
+    border-top: 1px solid white;
+    padding-top: 20px; /* Esto es para dar un poco de espacio entre la línea y los botones */
+}
+
+.centrar-contenido form button {
+    background-color: gray;
+    color: white; 
+    border: 1px solid white;
+
+}
+
+.centrar-contenido form button:hover {
+    background-color: white;
+    color: rgb(0, 0, 0); 
+    border: 1px solid rgb(0, 0, 0);
+
+}
+
+.centrar-contenido form {
+    background-color: #808080;
+    padding: 20px;
+    border: none;
+    border-radius: 5px;
+    box-shadow: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+
+    </style>
+
+ 
+
+{% endblock %}

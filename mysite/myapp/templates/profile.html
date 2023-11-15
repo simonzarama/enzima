@@ -1,6 +1,242 @@
 {% extends 'base_user.html' %}
-
+{% load static %}
 
 {% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+<style>
+
+.center-content .rectangle-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 200px; /* Espacio entre los botones */
+    position: relative; /* Para posicionar la línea amarilla correctamente */
+
+}
+
+.center-content .rectangle-container .highlight-line {
+  width: 150px; /* Ancho del botón */
+  height: 4px;  /* Altura de la línea */
+  background-color: rgb(234, 216, 127); /* Color de la línea */
+  position: absolute;
+  bottom: 12px;
+  transition: left 0.3s ease-out; /* Transición suave para el desplazamiento */
+  left: 180px; 
+}
+    
+.profile-container {
+    width: 820px;
+    margin: 0 auto;
+    color: white;
+    display: flex;
+    flex-direction: column;
+}
+
+.top-section {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;  /* Esto asegura que los elementos estén alineados verticalmente */
+}
+
+/* ... (resto de tu CSS sin cambios) ... */
+
+
+    .banner {
+        width: 820px;
+        height: 100px;
+        background-color: rgb(234, 216, 127) /* Puedes cambiar el color de fondo */
+    }
+
+
+    .username {
+        font-weight: bold;
+        margin-top: 0px;
+    }
+
+    .btn {
+      /* Suponiendo un fondo oscuro, pero puedes cambiarlo según tu diseño */
+    color: white;
+    padding: 5px 10px;
+    text-decoration: none;
+    border: none;
+    border-radius: 25px;
+    border: 1px solid #ffffff;
+    margin-bottom: 2px;
+    }
+
+    .btn:hover {
+    background-color: rgb(234, 216, 127);
+    color: #000000; /* Cambia el color del texto al pasar el mouse sobre él a un blanco apagado */
+    text-decoration: none; /* Esto quita el subrayado al pasar el mouse */
+    }
+
+    .icon-envelope {
+    margin-right: 10px;
+    margin-top: 2px;
+    color: white;
+    display: inline-flex; /* Para centrar el ícono verticalmente */
+    align-items: center;  /* Centra el ícono verticalmente */
+    justify-content: center; /* Centra el ícono horizontalmente */
+    width: 35px;  /* Ajusta según el tamaño deseado */
+    height: 35px; /* Ajusta según el tamaño deseado */
+    border: 1px solid white; /* Grosor y color del borde */
+    border-radius: 50%;  /* Hace que el borde sea circular */
+    background-color: transparent;  /* Asegurarse de que el fondo sea transparente */
+    }
+
+    .icon-envelope:hover {
+    background-color:none;
+    color: rgb(234, 216, 127); /* Cambia el color del texto al pasar el mouse sobre él a un blanco apagado */
+    text-decoration: none; /* Esto quita el subrayado al pasar el mouse */
+    }
+
+    
+      /* Espacio entre el ícono y el botón */
+    
+
+    .email {
+        font-style: italic;
+        font-weight: 300;
+        color: gray;
+        margin-top: 0px;
+    }
+
+    .bio {
+        max-width: 820px;
+        margin-top: 10px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 4; /* muestra solo 3 líneas */
+        -webkit-box-orient: vertical;
+    }
+</style>
+
+<br>
+<br>
+<br>
+
+<div class="profile-container">
+    <div class="banner">
+        <div class="profile-image-big">
+            <img src="{% static 'myapp/images/default_profile_icon.png' %}" alt="Imagen de perfil">
+        </div>
+    </div>
+
+    <div class="profile-container">
+
+        <div class="top-section">
+            <!-- Sección izquierda - Username -->
+            <div class="username">Your chosen name</div>
+            <!-- <div class="username">{{ profile_user.username }}</div> -->
+            
+            <!-- Sección derecha - Ícono y botón -->
+            <div class="right-section">
+                <a href="#" class="icon-envelope"><i class="fas fa-envelope"></i></a>
+                <a href="{% url 'edit_profile' username=user.username %}" class="btn">Edit Profile</a>
+            </div>
+        </div>
+    
+        <!-- Otros detalles como el email y la biografía -->
+        <div class="details-section"></div>
+        <div class="email">@username</div>
+
+            <!-- <div class="email">{{ profile_user.email }}</div> -->
+            
+            <!-- Texto ficticio para la biografía -->
+            <div class="bio">
+                {{ profile_user.biography|truncatechars:400|default:"While this app respects the choice of anonymity, we offer the added feature of a personal bio for those who wish to establish a more transparent presence—labs, doctors, medical centers, etc. We also offer a rigorous account verification process, adding an additional layer of trust and authenticity." }}
+            </div>
+        </div>
+    
+    </div>
+    
+        
+    </div>
+    
+    <br>
+
+    
+
+    <div style="clear: both;"></div> <!-- Este div sirve para limpiar los floats y evitar problemas de diseño -->
+</div>
+
+
+
+
+    <div class="center-content">
+        <div class="rectangle-container">
+            <!-- Aquí están los 4 botones dentro del recuadro -->
+            <div class="community-button" data-btn="posts">
+                <a href="#">Posts</a>
+            </div>
+            <div class="community-button" data-btn="saved">
+                <a href="#">Saved</a>
+            </div>
+            <div class="highlight-line"></div> <!-- Esta es la línea amarilla -->
+        </div>
+    </div>
+    
+    <div class="results-container" id="posts-results">
+        {% include 'profile-posts.html' %}
+    </div>
+    
+    <div class="results-container" id="saved-results">
+        {% include 'profile-saved.html' %}
+    </div>
+    
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let buttons = document.querySelectorAll('.community-button');
+        let highlight = document.querySelector('.highlight-line');
+        
+        buttons.forEach(function(button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+        
+                // Mover la línea de resaltado
+                let buttonRect = button.getBoundingClientRect();
+                let containerRect = highlight.parentElement.getBoundingClientRect();
+                highlight.style.left = (buttonRect.left - containerRect.left + window.pageXOffset) + "px";
+        
+                // Si el botón pulsado es "Saved", hacemos una solicitud AJAX
+                if (button.dataset.btn === 'saved') {
+                    $.ajax({
+                        url: '{% url "saved_content" username=profile_user.username %}', // Asume que tienes una variable `profile_user` en el contexto
+                        method: 'GET',
+                        success: function(data) {
+                            document.getElementById('saved-results').innerHTML = data;
+                            showResults('saved-results');
+                        },
+                        error: function(err) {
+                            console.error("Error al cargar el contenido guardado:", err);
+                        }
+                    });
+                } else {
+                    // Si no es el botón "Saved", simplemente mostramos el contenedor correspondiente
+                    showResults(button.dataset.btn + '-results');
+                }
+            });
+        });
+        
+        // Mostrar resultados de 'posts' por defecto al cargar la página
+        showResults('posts-results');
+    });
+    
+    function showResults(resultType) {
+        console.log("Mostrando resultados para:", resultType);  // línea para depuración
+        
+        // Oculta todos los contenedores de resultados
+        let allResults = document.querySelectorAll('.results-container');
+        allResults.forEach(result => result.style.display = 'none');
+        
+        // Muestra el contenedor de resultados específico
+        document.getElementById(resultType).style.display = 'block';
+    }
+    
+</script>
 
 {% endblock %}

@@ -1,0 +1,817 @@
+{% extends 'base_user.html' %}
+{% load custom_filters %}
+{% load static %}
+
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+{% block content %}
+
+<div class="centrar-contenido">
+    <article class="post">
+        <p>
+            Published by:
+            <a href="{% url 'profile' post.user.username %}" class="link-blanco">{{ post.user.username }}</a>
+            on
+            <a href="{% url 'view_community' post.community.name %}" class="link-blanco">{{ post.community.name }}</a>
+        </p>
+        <a href="{% url 'post_detail' post.id %}" class="post-link">
+            <h3 id="post-title-{{ post.id }}">{{ post.title }}</h3>
+            <div class="media-container">
+                {% if post.media_file %}
+                    {% if post.media_file.url|lower|endswith:".mp4" or post.media_file.url|lower|endswith:".webm" %}
+                        <video controls>
+                            <source src="{{ post.media_file.url }}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    {% else %}
+                        <img src="{{ post.media_file.url }}" alt="Media file">
+                    {% endif %}
+                {% endif %}
+            </div>
+            <p id="post-content">{{ post.content|linebreaks }}</p>
+        </a>
+        <div class="post-separator"></div>
+            <div class="post-actions">
+                <p class="comment-count" id="comment-count-{{ post.id }}">
+                    {{ post.comments.count }} Comment{{ post.comments.count|pluralize }}
+                </p>
+                <a href="#" data-postid="{{ post.id }}" class="like-button">
+                    {% if is_liked %}
+                        Unlike
+                    {% else %}
+                        Like
+                    {% endif %}
+                </a>
+                <span id="like-count-{{ post.id }}">{{ post.likes_count }} Like{{ post.likes_count|pluralize }}</span> 
+                <button data-post-id="{{ post.id }}" class="save-btn" id="save-btn">
+                    {% if post in request.user.savedcontent.saved_posts.all %}
+                        Unsave
+                    {% else %}
+                        Save
+                    {% endif %}
+                </button>
+                {% if request.user == post.user %}
+                    <div class="more-options-container">
+                        <button class="more-options-button" data-post-id="{{ post.id }}" id="more-options-btn-{{ post.id }}">More Options</button>
+                        <div class="options-container" id="options-container-{{ post.id }}" style="display:none;">
+                            <button class="edit-button" data-post-id="{{ post.id }}">Edit</button>
+                            <button class="delete-button" data-post-id="{{ post.id }}">Delete</button>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="comment-section">
+            <form method="post" action="{% url 'add_comment' post.id %}" id="comment-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="comment_text">Add Comment:</label><br>
+                    <textarea id="comment_text" name="comment_text" rows="4" cols="50"></textarea>
+                </div>
+                <button type="submit">Comment</button>
+            </form>
+        
+            <h4>Comments:</h4>
+{% for comment in post.comments.all %}
+    <div class="comment" id="comment-{{ comment.id }}">
+        <p>By <a href="{% url 'profile' post.user.username %}" class="link-blanco">{{ post.user.username }}</a></p>
+        <p>{{ comment.text }}</p>
+        {% if request.user == comment.user %}
+            <div class="edit-buttons-container">
+                <a href="#" class="edit-comment-button text-button" data-comment-id="{{ comment.id }}">
+                    <i class="fa fa-edit"></i> Edit
+                </a>
+                <a href="#" class="delete-comment-button text-button" data-comment-id="{{ comment.id }}">
+                    <i class="fa fa-trash"></i> Delete
+                </a>
+            </div>
+        {% endif %}
+    </div>
+{% endfor %}
+
+<!-- Modal para editar comentarios -->
+<div id="edit-comment-modal" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+    <textarea id="edit-comment-textarea" rows="4" cols="50"></textarea>
+    <div id="edit-button-container" style="display: flex; justify-content: space-around; margin-top: 10px;">
+        <button id="cancel-edit-button" class="cancel-button">Cancel</button>
+        <button id="save-edit-comment-button" class="save-button">Save</button>
+    </div>
+</div>
+
+<!-- Modal para confirmar la eliminación de comentarios -->
+<div id="delete-comment-modal" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+    <p>Are you sure you want to delete this comment?</p>
+    <div id="delete-button-container" style="display: flex; justify-content: space-around; margin-top: 10px;">
+        <button id="cancel-delete-button" class="cancel-button">Cancel</button>
+        <button id="confirm-delete-button" class="save-button">Delete</button>
+    </div>
+</div>
+
+
+
+</div>  <!-- Este es el cierre de div para la sección de comentarios -->
+</article>
+</div>
+
+
+
+<div id="delete-confirmation" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+    <p>Are you sure you want to delete this?</p>
+    <div id="button-container" style="display: flex; justify-content: space-around;">
+        <button id="cancel-button" class="cancel-button">Cancel</button>
+        <button id="confirm-post-delete-button" class="btn delete-button" data-community-name="{{ post.community.name }}">Delete</button>
+    </div>
+</div>
+<div id="edit-post-container" class="edit-post-container" style="display:none; border: 1px solid black;">
+    <form id="edit-post-form" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="edit-title">Title:</label>
+            <input type="text" id="edit-title" name="title" required="" style="border: 1px solid black;">
+        </div>
+        <div class="form-group">
+            <label for="edit-content">Text:</label>
+            <textarea id="edit-content" name="content" style="border: 1px solid black; width: 800px; min-height: 300px;">{{ post.content }}</textarea>
+        </div>
+        <div class="form-group">
+            <label for="edit-file-input">Attach file:</label>
+            <input type="file" id="edit-file-input" name="media_file" multiple accept="image/*,video/*">
+            <div id="current-file"></div> 
+            <input type="checkbox" id="remove-media-file" name="remove_media_file" value="true">
+            <label for="remove-media-file">Delete File</label>
+        </div>
+        <div class="edit-buttons-container">
+            <button type="submit" class="save-button">Save Changes</button>
+            <button type="button" id="cancel-edit-post-button" class="cancel-button">Cancel</button>
+        </div>
+        
+    </form>
+</div>
+
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Convierte URLs en enlaces clickeables en el contenido del post
+        var contentElements = document.querySelectorAll('.post-link p:last-child');
+        contentElements.forEach(function(contentElement) {
+            var linkedContent = Autolinker.link(contentElement.innerHTML);
+            contentElement.innerHTML = linkedContent;
+        });
+        
+        // Funcionalidad de "like"
+        document.querySelectorAll('.like-button').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const postId = this.getAttribute('data-postid');
+                const buttonElement = this;
+
+                fetch(`/like_post/${postId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Network response was not ok");
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.is_liked) {
+                        buttonElement.textContent = "Unlike";
+                    } else {
+                        buttonElement.textContent = "Like";
+                    }
+                    const likesCount = data.likes_count;
+                    document.querySelector('#like-count-' + postId).textContent = 
+                        likesCount + ' Like' + (likesCount !== 1 ? 's' : '');
+                })
+                .catch(error => {
+                    console.error("There was a problem with the fetch operation:", error.message);
+                });
+            });
+        });
+
+// Funcionalidad de "guardar"
+document.querySelectorAll('.save-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const contentId = this.getAttribute('data-post-id');
+        const contentTypeModel = 'post'; // Asume que estás trabajando con posts. Ajusta según tu modelo
+
+        fetch(`/${contentTypeModel}/${contentId}/save/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken') // Asume que tienes una función getCookie para obtener el token CSRF
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            this.textContent = data.saved ? "Unsave" : "Save";
+        })
+        .catch(error => {
+            console.error("Error:", error);
+        });
+    });
+});
+
+// Esta función asume que estás utilizando cookies para el token CSRF
+function getCookie(name) {
+    let value = "; " + document.cookie;
+    let parts = value.split("; " + name + "=");
+    if (parts.length === 2) return parts.pop().split(";").shift();
+}
+
+        // Funcionalidad de "más opciones"
+        document.querySelectorAll('.more-options-button').forEach(button => {
+            button.addEventListener('click', function(event) {
+                event.stopPropagation();
+                var optionsContainer = document.querySelector('#options-container-' + this.getAttribute('data-post-id'));
+                optionsContainer.style.display = optionsContainer.style.display === 'none' ? '' : 'none';
+            });
+        });
+        
+        document.addEventListener('click', function(event) {
+            document.querySelectorAll('.more-options-button').forEach(button => {
+                var optionsContainer = document.querySelector('#options-container-' + button.getAttribute('data-post-id'));
+                var isClickInside = optionsContainer.contains(event.target);
+                if (!isClickInside && optionsContainer.style.display !== 'none') {
+                    optionsContainer.style.display = 'none';
+                }
+            });
+        });
+
+        // Funcionalidades de editar y eliminar se pueden agregar aquí de manera similar...
+
+    $('.delete-button').click(function(){
+        var post_id = $(this).data("post-id");
+        $('#delete-confirmation').data('post-id', post_id).show();  // guarda el post_id y muestra el cuadro de confirmación
+    });
+
+    $('#cancel-button').click(function(){
+        $('#delete-confirmation').hide();  // oculta el cuadro de confirmación
+    });
+
+    $(document).ready(function() {
+    $('#confirm-post-delete-button').click(function(){
+        var post_id = $('#delete-confirmation').data('post-id');
+        var community_name = $(this).data('community-name');  // obtiene el nombre de la comunidad desde el atributo data
+        
+        var redirect_url = "{% url 'view_community' 'community_placeholder' %}".replace('community_placeholder', community_name);  // genera la URL de redirección
+
+        $('#delete-confirmation').hide();  // oculta el cuadro de confirmación
+
+        $.ajax({
+            url: "{% url 'delete_post' 9999 %}".replace(9999, post_id),
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            success: function(response) {
+                // Redirige a la página de la comunidad después de eliminar el post
+                window.location.href = redirect_url;
+            },
+            error: function(response) {
+                console.log('Error:', response);
+            }
+        });
+    });
+});
+
+
+    $('.edit-button').click(function() {
+    var post_id = $(this).data("post-id");
+    
+    $.ajax({
+        url: `/get_post_data/${post_id}/`,
+        method: 'GET',
+        success: function(response) {
+            $('#edit-title').val(response.title);
+            $('#edit-content').val(response.content);
+            $('#edit-post-container').data('post-id', post_id).show();
+        },
+        error: function(response) {
+            console.log('Error:', response);
+        }
+    });
+});
+
+$(document).ready(function() {
+    $('#cancel-edit-post-button').on('click', function() {
+        console.log('Botón cancelar clickeado');
+        $('#edit-post-container').hide();
+    });
+});
+
+$('#edit-post-form').submit(function(e){
+    e.preventDefault();
+    var post_id = $('#edit-post-container').data('post-id');
+    var new_title = $('#edit-title').val();
+    var new_content = $('#edit-content').val();
+    var media_file = $('#edit-file-input')[0].files[0];
+
+    var formData = new FormData();
+    formData.append('title', new_title);
+    formData.append('content', new_content);
+    if (media_file) {
+        formData.append('media_file', media_file);
+    }
+
+    if ($('#remove-media-file').prop('checked')) {
+        formData.append('remove_media_file', 'true');
+    }
+
+    $.ajax({
+        url: `/post/${post_id}/edit/`,
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                $('#post-title-' + post_id).text(response.title);
+                $('#post-container-' + post_id).html('<div id="post-content-' + post_id + '">' + response.content.replace(/\n/g, '<br>') + '</div>');
+                if (response.media_url) {
+                    var mediaElement;
+                    if (response.media_url.toLowerCase().endsWith('.mp4')) {
+                        mediaElement = `<video controls><source src="${response.media_url}" type="video/mp4">Your browser does not support the video tag.</video>`;
+                    } else {
+                        mediaElement = `<img src="${response.media_url}" alt="Media file" class="media-thumbnail">`;
+                    }
+                    $('#post-file-' + post_id).replaceWith(mediaElement);
+                } else {
+                    $('#post-file-' + post_id).replaceWith('');
+                }
+                $('#edit-post-container').hide();
+                location.reload();
+            } else {
+                console.error('Error del servidor:', response.error);
+            }
+        },
+        error: function(response) {
+            console.log('Error:', response);
+        }
+    });
+});
+    });
+</script>
+
+
+
+<style>
+
+.post-link, .post-link:hover {
+    text-decoration: none;
+    color: inherit;
+    background-color: inherit;
+}
+
+.post-link h3, .post-link p, .post-link img {
+    color: inherit;
+    text-decoration: none;
+}
+
+.post-link:hover h3, .post-link:hover p, .post-link:hover img {
+    color: inherit;
+    text-decoration: none;
+}
+
+
+.delete-button {
+    background-color: rgb(234, 127, 127);
+}
+
+.edit-button:hover {
+    background-color: rgb(234, 127, 127);
+}
+
+.delete-button:hover{
+    background-color: rgb(234, 127, 127);
+    color: #000000;
+}
+
+.edit-buttons-container {
+    display: flex;
+    justify-content: space-between; /* Esto separará los botones */
+    width: 25%; /* O un ancho específico si lo prefieres */
+    padding: 10px; /* Añade padding si es necesario */
+}
+
+.save-button {
+    color: white;
+    padding: 10px 20px;
+    background-color: rgb(234, 127, 127);
+    text-decoration: none;
+    border: none;
+    border-radius: 25px;
+    border: 1px solid #ffffff;
+    margin-bottom: 2px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    width: 150px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.save-button:hover {
+    background-color: rgb(234, 127, 127);
+    color: #000000;
+}
+
+
+.cancel-button {
+    color: white;
+    background-color: #000000;
+    padding: 10px 20px;
+    text-decoration: none;
+    border: none;
+    border-radius: 25px;
+    border: 1px solid #ffffff;
+    margin-bottom: 2px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    width: 100px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cancel-button:hover {
+    background-color: rgb(255, 255, 255);
+    color: #000000;
+    border: 1px solid #000000;
+}
+
+.media-thumbnail {
+    width: 200px;
+    height: auto;
+}
+
+.edit-post-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    border: 1px solid #ccc;
+    z-index: 1000;  /* para asegurarse de que aparezca en la parte superior*/
+}
+
+
+    .btn {
+        /* Suponiendo un fondo oscuro, pero puedes cambiarlo según tu diseño */
+        color: white;
+        padding: 5px 10px;
+        text-decoration: none;
+        border: none;
+        border-radius: 25px;
+        border: 1px solid #ffffff;
+        margin-bottom: 2px;
+    }
+
+    .btn:hover,
+    .btn.selected {
+        
+        color: #000000; /* Cambia el color del texto al pasar el mouse sobre él a un blanco apagado */
+        text-decoration: none; /* Esto quita el subrayado al pasar el mouse */
+    }
+
+
+    .post-link, .post-link:hover {
+        text-decoration: none;
+        color: inherit;
+        background-color: inherit;
+    }
+    
+    .post-link h3, .post-link p, .post-link img {
+        color: inherit;
+        text-decoration: none;
+    }
+    
+    .post-link:hover h3, .post-link:hover p, .post-link:hover img {
+        color: inherit;
+        text-decoration: none;
+    }
+    
+    
+    .text-button {
+        background: none;
+        border: none;
+        color: white;
+        text-decoration: none; /* Esto eliminará el subrayado de los enlaces */
+        cursor: pointer;
+        font-size: 14px;
+        padding: 0;
+    }
+    
+    .text-button i {
+        margin-right: 2px; /* Añade un pequeño espacio entre el icono y el texto */
+    }
+    
+    /* Estilo adicional para cambiar el color del texto al pasar el ratón */
+    .text-button:hover {
+        color: #ddd;
+    }
+    
+    .edit-comment-button {
+        margin-right: 20px;  /* Ajusta el valor según lo necesites */
+    }
+    
+    .delete-comment-button {
+        margin-left: 20px;  /* Ajusta el valor según lo necesites */
+    }
+    
+    
+    .link-blanco {
+        color: white;
+        text-decoration: none; /* Opcional: esto eliminará el subrayado */
+    }
+    .link-blanco:hover {
+        color: white; /* Esto mantendrá el color blanco incluso cuando se pasa el cursor sobre el enlace */
+        text-decoration: underline; /* Opcional: esto subrayará el enlace al pasar el cursor */
+    }
+    
+    
+    /* Estilo general */
+    .centrar-contenido {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        margin: 20px 0;
+    }
+    
+    /* Estilo para el post y la sección de comentarios */
+    .centrar-contenido .post,
+    .centrar-contenido .comment-section {
+        background-color: #808080;
+        padding: 20px;
+        border: 1px solid white;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        width: calc((400px * 2) + 20px);
+        box-sizing: border-box;
+        margin-bottom: 50px;
+    }
+    
+    .centrar-contenido .comment-section {
+        width: 780px
+    
+    }
+    
+    /* Estilo para el contenedor de medios */
+    .media-container video,
+    .media-container img {
+        max-width: 400px;
+        height: auto;
+    }
+    
+    /* Estilo para los botones */
+    .post-actions .like-button,
+    .post-actions .save-btn,
+    .post-actions .more-options-button,
+    .post-actions .edit-button,
+    .post-actions .delete-button,
+    .centrar-contenido .comment-section button {
+        display: inline-block;
+        margin: 0 10px;
+        padding: 10px 20px;
+        background-color: rgb(234, 216, 127);
+        color: #000000;
+        border: 1px solid white;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .post-actions {
+        margin: 20px 0; /* Esto añadirá un margen de 20px arriba y abajo del contenedor */
+        display: flex;
+        flex-wrap: nowrap; /* Asegura que los elementos no se envuelvan */
+        align-items: center;
+        gap: 10px;
+    }
+    
+    
+    .post-actions .like-button:hover,
+    .post-actions .save-btn:hover,
+    .post-actions .more-options-button:hover,
+    .post-actions .edit-button:hover,
+    .post-actions .delete-button:hover,
+    .centrar-contenido .comment-section button:hover {
+        background-color: rgb(234, 127, 127);
+    }
+    
+    /* Estilo para el contenedor de más opciones */
+    .post-actions .more-options-container {
+        position: relative;
+        display: inline-block;
+    }
+    
+    .post-actions .options-container {
+        position: absolute;
+        width: 144px;
+        top: 100%;
+        left: 50;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        background-color: #808080;
+        border: 1px solid #ccc;
+        padding: 10px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        transform: translateX(10px);
+    }
+    
+    .centrar-contenido .comment-section form {
+        max-width: none; /* Elimina el ancho máximo */
+        width: calc((400px * 2) - 20); /* Establece el ancho deseados */
+    }
+    
+    
+    /* Estilo para la sección de comentarios */
+    .centrar-contenido .comment-section .form-group,
+    .centrar-contenido .comment-section textarea {
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .centrar-contenido .comment-section button {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .centrar-contenido .comment-section h4,
+    .centrar-contenido .comment {
+        border-top: 1px solid white;
+        padding-top: 10px;
+        margin-top: 10px;
+        padding-right: 20px;
+        box-sizing: border-box;
+    }
+    
+    
+    
+    </style>
+    
+    
+
+<script>
+
+$(document).ready(function() {
+    $('#comment-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        var form_data = $(this).serialize();
+        var textarea = $('#comment_text');  // Obtén la referencia al elemento textarea
+        
+        $.ajax({
+            url: $(this).attr('action'),
+            type: 'POST',
+            data: form_data,
+            headers: {
+                'X-CSRFToken': $('input[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                // Esto se ejecuta si la solicitud fue exitosa
+                var new_comment_html = `
+                    <div class="comment" id="comment-${response.comment_id}">
+                        <p>By <a href="{% url 'profile' post.user.username %}" class="link-blanco">{{ post.user.username }}</a></p>
+                        <p>${response.text}</p>
+                        <a href="#" class="edit-comment-button text-button" data-comment-id="${response.comment_id}">
+                            <i class="fa fa-edit"></i> Edit
+                        </a>
+                        <a href="#" class="delete-comment-button text-button" data-comment-id="${response.comment_id}">
+                            <i class="fa fa-trash"></i> Delete
+                        </a>
+                    </div>
+                `;
+                $('.comment-section').append(new_comment_html);  // Agrega el nuevo comentario al final de la lista de comentarios
+
+                // Encuentra el contador de comentarios
+                var commentCountElement = $('.comment-count');
+
+                // Extrae el número actual de comentarios
+                var currentCount = parseInt(commentCountElement.text(), 10);
+
+                // Incrementa el contador
+                currentCount += 1;
+
+                // Actualiza el texto del contador en el DOM
+                commentCountElement.text(currentCount + " Comment" + (currentCount !== 1 ? "s" : ""));
+
+                textarea.val('');  // Vacía el área de texto
+            },
+            error: function(response) {
+                // Esto se ejecuta si hubo un error en la solicitud
+                console.error('Error:', response);
+            }
+        });
+    });
+});
+
+
+// Variable global para almacenar el comment_id
+var currentCommentId;
+
+// Manejador de eventos para guardar el comentario editado
+$('#save-edit-comment-button').click(function() {
+    var new_text = $('#edit-comment-textarea').val();
+    if (new_text) {
+        $.ajax({
+            url: `/edit_comment/${currentCommentId}/`,
+            method: 'POST',
+            data: { text: new_text },
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#comment-' + currentCommentId + ' p:nth-child(2)').text(new_text);
+                    $('#edit-comment-modal').hide();  // Oculta el modal
+                } else {
+                    console.error('Error al actualizar el comentario.');
+                }
+            },
+            error: function(response) {
+                console.log('Error:', response);
+            }
+        });
+    }
+});
+
+// Manejador de eventos para eliminar el comentario
+$('#confirm-delete-button').click(function() {
+        $.ajax({
+            url: `/delete_comment/${currentCommentId}/`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#comment-' + currentCommentId).remove();
+                    $('#delete-comment-modal').hide();  // Oculta el modal
+
+                    // Encuentra el contador de comentarios
+                    var commentCountElement = $('.comment-count');
+
+                    // Extrae el número actual de comentarios
+                    var currentCount = parseInt(commentCountElement.text(), 10);
+
+                    // Disminuye el contador
+                    currentCount -= 1;
+
+                    // Actualiza el texto del contador en el DOM
+                    commentCountElement.text(currentCount + " Comment" + (currentCount !== 1 ? "s" : ""));
+                } else {
+                    console.error('Error al eliminar el comentario.');
+                }
+            },
+            error: function(response) {
+                console.error('Error:', response);
+            }
+        });
+    });
+
+
+// Manejador de eventos para editar un comentario
+$(document).on('click', '.edit-comment-button', function() {
+    currentCommentId = $(this).data('comment-id');
+    var current_text = $('#comment-' + currentCommentId + ' p:nth-child(2)').text();
+    $('#edit-comment-textarea').val(current_text);
+    $('#edit-comment-modal').show();
+});
+
+// Manejador de eventos para eliminar un comentario
+$(document).on('click', '.delete-comment-button', function() {
+    currentCommentId = $(this).data('comment-id');
+    $('#delete-comment-modal').show();
+});
+
+// Manejador de eventos para cancelar la edición/eliminación de un comentario
+$('#cancel-edit-button, #cancel-delete-button').click(function() {
+    $('#edit-comment-modal, #delete-comment-modal').hide();
+});
+
+
+    
+</script>
+
+    
+
+
+{% endblock %}

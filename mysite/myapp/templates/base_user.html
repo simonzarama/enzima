@@ -1,45 +1,56 @@
 {% load static %}
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <title>Tu sitio</title>
     <link rel="stylesheet" href="{% static 'myapp/styles.css' %}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/autolinker/3.14.3/Autolinker.min.js"></script>
 </head>
 <body>
     <header class="custom-header">
         <!-- Logo -->
         <a class="custom-logo" href="{% url 'home' %}">
-            <img src="{% static 'path_to_profile_icon' %}" alt="Home" width="25">
+            <img src="{% static 'myapp/images/ENZIMA.png' %}" alt="Home" width="50">
         </a>
         
         <!-- Barra de búsqueda -->
-        <form class="custom-search">
-            <input class="custom-search-input" type="search" placeholder="Search" aria-label="Search">
-            <button class="custom-search-btn" type="submit">Search</button>
+        <form id="ajax-search-form" class="custom-search" onsubmit="event.preventDefault(); redirectToSearch();">
+            <input id="search-input" class="custom-search-input" type="search" name="q" placeholder="Find Communities, Posts and People" aria-label="Search">
+            <button type="submit" class="custom-search-btn">Search</button>
         </form>
-
+        
         <!-- Botones de perfil, notificaciones, carrito y mensajes -->
         <div class="custom-nav-links">
             <a class="nav-link" href="{% url 'notifications' %}">
-                <img src="{% static 'path_to_notifications_icon' %}" alt="Notificaciones" width="25">
+                <i class="fas fa-bell"></i>
             </a>
             <a class="nav-link" href="{% url 'messages' %}">
-                <img src="{% static 'path_to_messages_icon' %}" alt="Mensajes" width="25">
+                <i class="fas fa-envelope"></i>
             </a>
             <a class="nav-link" href="{% url 'cart' %}">
-                <img src="{% static 'path_to_cart_icon' %}" alt="Carrito" width="25">
+                <i class="fas fa-shopping-cart"></i>
             </a>
-            <a class="nav-link" href="{% url 'profile' %}">
-                <img src="{% static 'path_to_profile_icon' %}" alt="Perfil" width="25">
+            {% if request.user.is_authenticated %}
+                 <a class="nav-link" href="{% url 'profile' request.user.username %}">
+            <img src="{% static 'myapp/images/default_profile_icon.png' %}" alt="Perfil" width="50" class="profile-image">
             </a>
+            {% else %}
+                <a class="nav-link" href="{% url 'profile' 'guest' %}">Perfil público</a>
+            {% endif %}
+
         </div>
     </header>
 
     <main>
+        
+
         {% block content %}
         {% endblock %}
     </main>
@@ -49,6 +60,14 @@
     </footer>
 
     <!-- Scripts de Bootstrap -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-pzjw8f+ua7Kw1TIq0v8FqDEfMz4+6TW7tTlOBD8+YmXkHs4CkOFoIF4yowUpGyxq" crossorigin="anonymous"></script>
+    <script>
+        function redirectToSearch() {
+            let query = document.getElementById('search-input').value;
+            console.log("Query:", query); // añade esta línea
+            window.location.href = `/search_results/?q=${query}`;
+}
+    </script>
+    
+   
 </body>
 </html>

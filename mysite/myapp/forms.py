@@ -2,6 +2,10 @@ from django import forms
 from .models import Community
 from django.contrib.auth.models import User
 from .models import Post
+from .models import CrowdfundingCampaign
+from django_select2 import forms as s2forms
+from .models import CrowdfundingCampaign, Community
+from .models import Resource
 
 class UserRegistrationForm(forms.ModelForm):
     class Meta:
@@ -43,4 +47,22 @@ class CreateCommunityForm(forms.ModelForm):
 class CreatePostForm(forms.ModelForm):
     class Meta:
         model = Post
-        fields = ['title', 'content']
+        fields = ['title', 'content', 'media_file']
+
+
+
+from django_select2.forms import Select2MultipleWidget
+
+class CrowdfundingCampaignForm(forms.ModelForm):
+    class Meta:
+        model = CrowdfundingCampaign
+        fields = ['title', 'description', 'goal', 'communities', 'media_file']
+        widgets = {
+            'communities': Select2MultipleWidget,
+        }
+
+
+class ResourceForm(forms.ModelForm):
+    class Meta:
+        model = Resource
+        fields = ['title', 'description', 'file', 'tags']

@@ -1,11 +1,19 @@
 {% extends 'base_user.html' %}
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
 
 
 {% block content %}
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Crear comunidad</button>
-</form>
 
+<br>
+<br>
+<br>
+
+<div class="centrar-contenido">
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Create Community</button>
+    </form>
+</div>
 {% endblock %}

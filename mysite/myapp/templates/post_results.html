@@ -1,0 +1,25 @@
+{% extends 'base_user.html' %}
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+
+{% block content %}
+    <br>
+    <br>
+
+    <h2>Resultados de búsqueda de publicaciones para "{{ query }}"</h2>
+
+    <br>
+    <br>
+
+    {% for post in posts %}
+        <div class="post-result">
+            <h2>{{ post.title }}</h2>
+            <p>{{ post.content|truncatechars:100 }}</p>
+            <!-- La línea anterior corta el contenido del post a 100 caracteres. -->
+            <a href="{% url 'post_detail' post.id %}">Leer más</a>
+            <!-- Asumimos que tienes una vista 'post_detail' para ver el post completo. -->
+        </div>
+{% endfor %}
+
+
+{% endblock %}

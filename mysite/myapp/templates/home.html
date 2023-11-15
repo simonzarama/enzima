@@ -1,16 +1,143 @@
 {% extends 'base_user.html' %}
-
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
 
 {% block content %}
-<h1>Bienvenido a tu página de inicio</h1>
-<p>¡Hola, {{ request.user.username }}! Aquí puedes ver tu información y actividades.</p>
 
-<div class="community-section">
-    <div class="community-button">
-        <a href="{% url 'explore' %}">EXPLORE</a>
-    </div>
-    <div class="community-button">
-        <a href="{% url 'create_community' %}">CREATE COMMUNITY</a>
+
+<br>
+
+<br>
+<br>
+<div class="center-content">
+    <div class="rectangle-container">
+        <!-- Aquí están los 4 botones dentro del recuadro -->
+        <div class="community-button" data-btn="explore">
+            <a href="#">Explore</a>
+        </div>
+        <div class="community-button" data-btn="crowdfunding">
+            <a href="#">Crowdfunding</a>
+        </div>
+        <div class="community-button" data-btn="store">
+            <a href="#">Products</a>
+        </div>
+        <div class="community-button" data-btn="resources">
+            <a href="#">Resources</a>
+        </div>
+        <div class="highlight-line"></div> <!-- Esta es la línea amarilla -->
     </div>
 </div>
+<br>
+<br>
+
+<div class="center-content">
+    <div class="community-button special-button">
+        <a href="{% url 'create_community' %}">Create a Community</a>
+    </div>
+</div>
+<br>
+<br>
+
+
+<div class="results-container" id="explore-results">
+    {% include 'explore.html' with top_communities=top_communities %}
+</div>
+
+<div class="results-container" id="crowdfunding-results">
+    {% include 'crowdfunding.html' %}
+</div>
+
+<div class="results-container" id="store-results">
+    {% include 'store.html' %}
+</div>
+
+<div class="results-container" id="resources-results">
+    {% include 'resources.html' %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let buttons = document.querySelectorAll('.community-button:not(.special-button)');
+    let highlight = document.querySelector('.highlight-line');
+    let specialButton = document.querySelector('.community-button.special-button a'); // seleccionamos el enlace dentro del botón especial
+
+    // Configuraciones para el botón especial
+    let specialButtonConfigs = {
+        'explore': {
+            text: 'Create a Community',
+            url: '{% url "create_community" %}'
+        },
+        'crowdfunding': {
+            text: 'Create Crowdfunding Campaign',
+            url: '{% url "create_campaign" %}' // Asegúrate de reemplazar esto con la URL real cuando la tengas
+        },
+        'store': {
+            text: 'Visit Store',
+            url: '#store-url' // Asegúrate de reemplazar esto con la URL real cuando la tengas
+        },
+        'resources': {
+            text: 'Add Resources',
+            url: '{% url "add_resource" %}'
+        }
+    };
+
+    // Función para mostrar los resultados
+    function showResults(resultType) {
+        console.log("Mostrando resultados para:", resultType); // línea para depuración
+
+        // Oculta todos los contenedores de resultados
+        let allResults = document.querySelectorAll('.results-container');
+        allResults.forEach(result => result.style.display = 'none');
+
+        // Muestra el contenedor de resultados específico
+        let resultsContainer = document.getElementById(resultType);
+        if(resultsContainer) {
+            resultsContainer.style.display = 'block';
+        } else {
+            console.error("No se encontró el contenedor de resultados:", resultType);
+        }
+    }
+
+    buttons.forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Mover la línea de resaltado
+            let buttonRect = button.getBoundingClientRect();
+            let containerRect = highlight.parentElement.getBoundingClientRect();
+            highlight.style.left = (buttonRect.left - containerRect.left + window.pageXOffset) + "px";
+
+            // Para los botones que no requieren AJAX, cambia el texto y la URL del botón especial
+            if (!button.classList.contains('ajax-button')) {
+                let config = specialButtonConfigs[button.dataset.btn];
+                specialButton.textContent = config.text;
+                specialButton.href = config.url;
+                showResults(button.dataset.btn + '-results');
+            }
+
+            // Para el botón de crowdfunding, realiza una solicitud AJAX
+            if (button.dataset.btn === 'crowdfunding') {
+                $.ajax({
+                    url: '{% url "all_crowdfunding" %}', // Actualizado para apuntar a la URL correcta
+                    method: 'GET',
+                    success: function(data) {
+                        document.getElementById('crowdfunding-results').innerHTML = data;
+                        showResults('crowdfunding-results');
+                    },
+                    error: function(err) {
+                        console.error("Error al cargar el crowdfunding:", err);
+                    }
+                });
+            }
+        });
+    });
+
+    // Mostrar resultados de 'explore' por defecto al cargar la página
+    showResults('explore-results');
+});
+
+
+</script>
+
+
 {% endblock %}

@@ -1,0 +1,174 @@
+{% extends 'base_user.html' %}
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+{% block content %}
+    <br>
+    <br>
+
+    
+
+
+    <div class="center-content">
+        <div class="rectangle-container">
+            <div class="community-button" data-btn="community">
+                <a href="#">Comunidades</a>
+            </div>
+            <div class="community-button" data-btn="users">
+                <a href="#">Usuarios</a>
+            </div>
+            <div class="community-button" data-btn="posts">
+                <a href="#">Publicaciones</a>
+            </div>
+            <div class="highlight-line"></div> <!-- Esta es la línea amarilla -->
+        </div>
+    </div>
+    
+    <br>
+    <br>
+    <br>
+    <br>
+
+
+   
+    <div class="container">
+        {% if communities %}
+            
+            <ul class="results-container" id="communities-results">
+                {% for community in communities %}
+                <li class="feature-box">
+                    <a href="{% url 'view_community' community_name=community.name %}">
+                      <i class="fas fa-vial icon"></i> <!-- Asegúrate de que la clase icon está aquí -->
+                      <span>{{ community.name }} - {{ community.community_type }}</span>
+                    </a>
+                  </li>
+                  
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No se encontraron comunidades con la búsqueda "{{ query }}".</p>
+        {% endif %}
+    </div>
+
+    
+    <div class="results-container" id="users-results">
+    {% for user in users %}
+    <div class="user-result">
+        <img src="{% static 'myapp/images/default_profile_icon.png' %}" alt="{{ user.username }}'s profile picture" class="user-profile-pic">
+        <a href="{% url 'profile' username=user.username %}" class="user-name">{{ user.username }}</a>
+        <a href="#" class="follow-btn">Follow</a>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="results-container" id="posts-results">
+    {% for post in posts %}
+    <div class="post-container">
+        <h3><a href="{% url 'post_detail' post_id=post.id %}" class="btn">{{ post.title }}</a></h3>
+        <p>{{ post.content }}</p>
+    </div>
+    {% endfor %}
+</div>
+
+    
+
+    <script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    let communityButton = document.querySelector('[data-btn="community"]');
+    let usersButton = document.querySelector('[data-btn="users"]');
+    let postsButton = document.querySelector('[data-btn="posts"]');
+
+    communityButton.addEventListener('click', () => showResults('communities-results'));
+    usersButton.addEventListener('click', () => showResults('users-results'));
+    postsButton.addEventListener('click', () => showResults('posts-results'));
+
+    // Mostrar resultados de comunidades por defecto al cargar la página
+    showResults('communities-results');
+});
+
+function showResults(resultType) {
+    console.log("Mostrando resultados para:", resultType);  // línea para depuración
+
+    // Oculta todos los contenedores de resultados
+    let allResults = document.querySelectorAll('.results-container');
+    allResults.forEach(result => result.style.display = 'none');
+
+    // Muestra el contenedor de resultados específico
+    document.getElementById(resultType).style.display = 'block';
+}
+
+let buttons = document.querySelectorAll('.community-button');
+let highlight = document.querySelector('.highlight-line');
+
+buttons.forEach(function(button) {
+    button.addEventListener('click', function(e) {
+        e.preventDefault();
+
+        // Mover la línea de resaltado
+        let buttonRect = button.getBoundingClientRect();
+        let containerRect = highlight.parentElement.getBoundingClientRect();
+        highlight.style.left = (buttonRect.left - containerRect.left + window.pageXOffset) + "px";
+
+        // Luego, llamamos a la función para mostrar los resultados. Usamos el dataset del botón para determinar qué resultados mostrar.
+        showResults(button.dataset.btn + '-results');
+    });
+});
+
+
+        </script>
+
+
+<style>
+
+
+/* Estilos para los íconos */
+.icon {
+  width: 50px;  /* Tamaño del ícono */
+  height: auto;  /* Mantiene la relación de aspecto */
+  margin-right: 10px;  /* Separación entre el ícono y el texto */
+  color: white;  /* Color del ícono */
+  /* Puedes añadir aquí otros estilos que necesites para el ícono */
+}
+
+/* Estilos para .feature-box que contiene el ícono y el texto */
+.feature-box {
+  display: flex;
+  align-items: center; /* Alinea los hijos (el ícono y el texto) verticalmente */
+  justify-content: start; /* Alinea los hijos horizontalmente al inicio */
+  margin: 10px 0;
+  padding: 20px;  /* Espacio dentro del .feature-box */
+  text-decoration: none; /* Remueve el subrayado de los enlaces */
+  color: inherit; /* El texto usa el color del elemento padre */
+  background: transparent;
+  border-radius: 0;  /* Radio del borde */
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Sombra del cuadro */
+  text-align: left; /* Alinea el texto a la izquierda */
+  width: 100%; /* O un ancho específico si es necesario */
+  cursor: pointer; /* Cambia el cursor al pasar el ratón encima */
+}
+
+/* Estilos para el contenedor principal que afecta a cómo se muestran los .feature-box */
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centra los elementos hijos horizontalmente */
+  justify-content: center; /* Centra los elementos hijos verticalmente */
+}
+
+/* Estilos para el contenedor de resultados */
+.results-container {
+  width: 82%; /* Ancho completo del contenedor */
+  padding: 0;  /* Remueve el padding por defecto */
+  list-style: none; /* Remueve los estilos de lista por defecto */
+  margin: 0; /* Remueve el margen por defecto */
+  display: flex; /* Habilita flexbox */
+  flex-direction: column; /* Ordena los elementos hijos en columna */
+  align-items: center; /* Centra los elementos hijos horizontalmente */
+}
+
+</style>
+
+
+{% endblock %}

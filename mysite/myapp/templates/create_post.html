@@ -1,26 +1,197 @@
 {% extends 'base_user.html' %}
+{% load custom_filters %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/autolinker/3.14.3/Autolinker.min.js"></script>
+
 
 {% block content %}
 
-<form method="post" action="{% url 'create_post' community.id %}">
-    {% csrf_token %}
+
+<div class="centrar-post">
+    <!-- Agrega enctype="multipart/form-data" a tu etiqueta form -->
+    <form method="post" action="{% url 'create_post' community.id %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="{{ form.title.id_for_label }}">Título:</label>
+            <div class="title-container">
+                {{ form.title }}
+                <div class="post-options">
+                    <!-- Cambia name="file-input" a name="media_file" -->
+                    <input type="file" id="file-input" name="media_file" multiple accept="image/*,video/*" style="display:none;"/>
+                    <button type="button" class="icon-button" onclick="document.getElementById('file-input').click();">
+                        <i class="far fa-image"></i>
+                    </button>
+                    <button type="button" class="icon-button">
+                        <i class="fas fa-link"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="file-preview" id="file-preview"></div>
+
+        <div class="form-group">
+            <label for="{{ form.content.id_for_label }}">Texto:</label>
+            {{ form.content }}
+        </div>
+
+        <button type="submit">Publicar</button>
+    </form>
+</div>
+
+
+<style>
+/* Estilos generales */
+
+.centrar-post {
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.centrar-post h2 {
+    margin-bottom: 20px;
+    color: #808080;
+}
+
+/* Estilos del formulario */
+.centrar-post form {
+    background-color: #808080; 
+    padding: 20px;
+    border: 1px solid white; 
+    border-radius: 5px; 
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); 
+    width: 100%;
+    max-width: 400px; 
+    box-sizing: border-box;
+}
+
+.centrar-post form button {
+    display: block; 
+    margin: 10px auto; 
+    padding: 10px 20px;
+    background-color:  rgb(234, 216, 127); 
+    color: #000000; 
+    border: 1px solid white; 
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.centrar-post form button:hover {
+    background-color: rgb(234, 127, 127); 
+}
+
+.centrar-post form p {
+    margin-bottom: 15px; 
+}
+
+.centrar-post form label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.sub-button {
+    display: inline-block; 
+    margin-right: 10px;
+    padding: 8px 16px;
+    background-color:  rgb(234, 216, 127); 
+    color: #000000;
+    border: 1px solid white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-radius: 5px;
+}
+
+
+.sub-button:hover {
+    background-color: rgb(234, 127, 127); /* Color de fondo del botón al pasar el mouse por encima */
+}
+
+/* Estilos adicionales para form-group para mejorar la apariencia */
+.form-group {
+    margin-bottom: 15px; /* Espacio entre los campos y el siguiente elemento */
+}
+
+.form-group label {
+    display: block; /* Asegura que las etiquetas estén sobre los campos */
+    margin-bottom: 5px; /* Espacio entre etiqueta y campo */
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    font-size: 0.8em;  /* Reduzca el tamaño del icono */
+    margin-left: 5px;  /* Espaciado entre los botones e input */
+    cursor: pointer;
+    color: #808080;
+    vertical-align: middle;  /* Alineación vertical con el input */
+    transition: color 0.2s;
+}
+
+.icon-button:hover {
+    color: rgb(234, 127, 127);
+}
+
+.form-group {
+    position: relative;
+}
+
+.post-options {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    margin-left: 10px;
+}
+
+.file-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.preview-image {
+    max-width: 100px;
+    max-height: 100px;
+    border: 1px solid #ccc;
+}
+
+</style>
+
+
+<script>
+    document.getElementById('file-input').addEventListener('change', function(e) {
+        const filePreview = document.getElementById('file-preview');
+        filePreview.innerHTML = '';  // Limpiar la vista previa anterior
     
-    <div class="post-options">
-        <button type="button">Multimedia</button>
-        <button type="button">Enlace</button>
-    </div>
+        const files = e.target.files;
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const reader = new FileReader();
+    
+            reader.onload = function(e) {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.alt = file.name;
+                img.classList.add('preview-image');
+                filePreview.appendChild(img);
+            };
+    
+            if (file.type.startsWith('image/')) {
+                reader.readAsDataURL(file);
+            } else {
+                // Si no es una imagen, mostrar el nombre del archivo
+                const div = document.createElement('div');
+                div.textContent = file.name;
+                filePreview.appendChild(div);
+            }
+        }
+    });
+    </script>
 
-    <div class="form-group">
-        <label for="{{ form.title.id_for_label }}">Título:</label>
-        {{ form.title }}
-    </div>
-
-    <div class="form-group">
-        <label for="{{ form.content.id_for_label }}">Texto (opcional):</label>
-        {{ form.content }}
-    </div>
-
-    <button type="submit">Publicar</button>
-</form>
 
 {% endblock %}

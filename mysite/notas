@@ -1,7 +1,116 @@
 
-1. creemos Models > View > Template > URL pattern. 
+{% load static %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-Feature 1: Landing page:
--log in / sign in 
+{% block content %}
+    <!-- Resto del contenido de tu página -->
+    <section id="top-communities">
+        <div id="top-communities-container">
+            <h2>Top Communities</h2>
+            {% for community in top_communities %}
+                <div class="feature-box">
+                    <i class="fas fa-vial icon"></i>
+                    <a href="{% url 'view_community' community_name=community.name %}">{{ community.name }}</a>
+                </div>
+            {% empty %}
+                <div style="grid-column: span 3; text-align: center;">No communities found.</div>
+            {% endfor %}
+        </div>
+    </section>
+    
 
-transports you to home: Communities, products, ads, your timeline 
+
+
+    <div style="text-align:center;">
+        <h2>Recommended Healthcare Communities</h2>
+        <br>
+        <div class="buttons-container">
+            <a href="https://www.vitalia.city/" target="_blank">
+                <img src="{% static 'myapp/images/vitalia.png' %}" alt="Vitalia" class="community-button">
+            </a>
+            <a href="https://www.prospera.co/" target="_blank">
+                <img src="{% static 'myapp/images/prospera.png' %}" alt="Prospera" class="community-button">
+            </a>
+        </div>
+    </div>
+    
+
+    <!-- Resto del contenido de tu página -->
+
+
+
+
+
+<style>
+
+#top-communities-container {
+  width: 95%;
+  margin: 20px auto; /* Ajusta el margen superior e inferior como prefieras */
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* Ahora tendremos 3 columnas */
+  grid-gap: 10px;
+  padding: 20px;
+
+}
+
+#top-communities-container h2 {
+  grid-column: span 3; /* Asegúrate de que el título abarque las 3 columnas */
+  text-align: center;
+}
+
+#top-communities-container .feature-box {
+  background: transparent;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border-radius: 0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+
+#top-communities-container .icon {
+  color: white;
+  margin-right: 10px;
+}
+ 
+ 
+
+#recommended-healthcare {
+  text-align: center;
+  margin-top: 20px; /* Ajusta el margen superior como prefieras */
+}
+
+#recommended-healthcare h2 {
+  margin-bottom: 20px; /* Ajusta el margen inferior del título como prefieras */
+}
+
+.buttons-container {
+        display: flex;
+        justify-content: center;
+        gap: 120px; /* Aumenta el espacio entre los botones a 120px */
+    }
+
+    .community-button {
+        width: 300px;
+        height: 100px;
+        object-fit: cover; /* Esto asegura que las imágenes se recorten en lugar de deformarse */
+        border-radius: 15px; /* Esto le da una curvatura a los botones */
+        margin: 0 50px; /* Esto empuja cada botón 50px a sus lados respectivos */
+    }
+.buttons-container a {
+  display: block;
+}
+
+.buttons-container img {
+  width: 300px;
+  height: 100px;
+  object-fit: cover; /* Asegúrate de que las imágenes cubran el área sin deformarse */
+}
+
+</style>
+
+
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends 'base_user.html' %}
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+
+{% block content %}
+    <br>
+    <br>
+
+    <h2>Resultados de búsqueda de comunidades para "{{ query }}"</h2>
+
+    {% for community in communities %}
+        <div class="community-result">
+            <h2>{{ community.name }}</h2>
+            <p>{{ community.description }}</p>
+        </div>
+    {% endfor %}
+
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends 'base_user.html' %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+
+{% block content %}
+
+<style>
+    body {
+        color: white;
+    }
+
+ 
+    .ensayo-box {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin: 10px 0;
+        background-color: white;
+        color: black;
+    }
+
+    .ensayo-box a {
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .ensayo-box:hover {
+        background-color: #f5f5f5;
+    }
+
+</style>
+
+    <form method="get">
+        <input type="text" name="query" value="{{ query }}" placeholder="Buscar ensayo...">
+        <input type="submit" value="Buscar">
+    </form>
+
+    <ul>
+        {% for ensayo in ensayos %}
+        <div class="ensayo-box">
+            <a href="https://clinicaltrials.gov/ct2/show/{{ NCTId }}?cond={{Condition|urlencode }}&rank={{Rank }}" target="_blank">
+                <h3>{{ ensayo.BriefTitle }}</h3>
+                <p>Status: {{ ensayo.OverallStatus }}</p>
+                <p>Location: {{ ensayo.LocationCity }}</p>
+            </a>
+        </div>
+        {% endfor %}
+    </ul>
+{% endblock %}
