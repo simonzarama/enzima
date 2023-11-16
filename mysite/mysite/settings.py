@@ -26,7 +26,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-zn!!^(#4=&#0qlya!20
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['127.0.0.1', '.vercel.app']
 
