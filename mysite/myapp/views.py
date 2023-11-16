@@ -70,6 +70,8 @@ def register(request):
         form = SignUpForm()
     return render(request, 'register.html', {'form': form})
 
+
+
 def landing(request):
     return render(request, 'landing.html')
 
