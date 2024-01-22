@@ -16,17 +16,16 @@
             <a href="#">Explore</a>
         </div>
         <div class="community-button" data-btn="crowdfunding">
-            <a href="#">Crowdfunding</a>
+            <a href="#">Trials</a>
         </div>
         <div class="community-button" data-btn="store">
             <a href="#">Products</a>
         </div>
-        <div class="community-button" data-btn="resources">
-            <a href="#">Resources</a>
-        </div>
+        
         <div class="highlight-line"></div> <!-- Esta es la línea amarilla -->
     </div>
 </div>
+<br>
 <br>
 <br>
 
@@ -44,7 +43,7 @@
 </div>
 
 <div class="results-container" id="crowdfunding-results">
-    {% include 'crowdfunding.html' %}
+    {% include 'trials.html' %}
 </div>
 
 <div class="results-container" id="store-results">
@@ -56,48 +55,60 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    let buttons = document.querySelectorAll('.community-button:not(.special-button)');
-    let highlight = document.querySelector('.highlight-line');
-    let specialButton = document.querySelector('.community-button.special-button a'); // seleccionamos el enlace dentro del botón especial
-
-    // Configuraciones para el botón especial
-    let specialButtonConfigs = {
-        'explore': {
-            text: 'Create a Community',
-            url: '{% url "create_community" %}'
-        },
-        'crowdfunding': {
-            text: 'Create Crowdfunding Campaign',
-            url: '{% url "create_campaign" %}' // Asegúrate de reemplazar esto con la URL real cuando la tengas
-        },
-        'store': {
-            text: 'Visit Store',
-            url: '#store-url' // Asegúrate de reemplazar esto con la URL real cuando la tengas
-        },
-        'resources': {
-            text: 'Add Resources',
-            url: '{% url "add_resource" %}'
+    document.addEventListener('DOMContentLoaded', function() {
+        let lastView = localStorage.getItem('lastView'); // Obtener la última subvista visitada del almacenamiento local
+    
+        let buttons = document.querySelectorAll('.community-button:not(.special-button)');
+        let highlight = document.querySelector('.highlight-line');
+        let specialButton = document.querySelector('.community-button.special-button a'); // seleccionamos el enlace dentro del botón especial
+    
+        // Configuraciones para el botón especial
+        let specialButtonConfigs = {
+            'explore': {
+                text: 'Create a Community',
+                url: '{% url "create_community" %}'
+            },
+            'crowdfunding': {
+                text: 'Create Trial',
+                url: '{% url "create_trial" %}' // Asegúrate de reemplazar esto con la URL real cuando la tengas
+            },
+            'store': {
+                text: 'Visit Store',
+                url: '#store-url' // Asegúrate de reemplazar esto con la URL real cuando la tengas
+            },
+            'resources': {
+                text: 'Add Resources',
+                url: '{% url "add_resource" %}'
+            }
+        };
+    
+        // Función para mostrar los resultados
+        function showResults(resultType) {
+            console.log("Mostrando resultados para:", resultType); // línea para depuración
+    
+            // Oculta todos los contenedores de resultados
+            let allResults = document.querySelectorAll('.results-container');
+            allResults.forEach(result => result.style.display = 'none');
+    
+            // Muestra el contenedor de resultados específico
+            let resultsContainer = document.getElementById(resultType);
+            if(resultsContainer) {
+                resultsContainer.style.display = 'block';
+            } else {
+                console.error("No se encontró el contenedor de resultados:", resultType);
+            }
         }
-    };
-
-    // Función para mostrar los resultados
-    function showResults(resultType) {
-        console.log("Mostrando resultados para:", resultType); // línea para depuración
-
-        // Oculta todos los contenedores de resultados
-        let allResults = document.querySelectorAll('.results-container');
-        allResults.forEach(result => result.style.display = 'none');
-
-        // Muestra el contenedor de resultados específico
-        let resultsContainer = document.getElementById(resultType);
-        if(resultsContainer) {
-            resultsContainer.style.display = 'block';
+    
+        // Verifica si se ha guardado una última subvista y muestra esa subvista
+        if (lastView) {
+            let buttonToClick = document.querySelector(`.community-button[data-btn='${lastView}']`);
+            if (buttonToClick) {
+                buttonToClick.click();
+            }
         } else {
-            console.error("No se encontró el contenedor de resultados:", resultType);
+            // Mostrar resultados de 'explore' por defecto al cargar la página
+            showResults('explore-results');
         }
-    }
-
     buttons.forEach(function(button) {
         button.addEventListener('click', function(e) {
             e.preventDefault();
@@ -118,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Para el botón de crowdfunding, realiza una solicitud AJAX
             if (button.dataset.btn === 'crowdfunding') {
                 $.ajax({
-                    url: '{% url "all_crowdfunding" %}', // Actualizado para apuntar a la URL correcta
+                    url: '{% url "all_trials" %}',// Actualizado para apuntar a la URL correcta
                     method: 'GET',
                     success: function(data) {
                         document.getElementById('crowdfunding-results').innerHTML = data;
@@ -137,7 +148,11 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
+
+
 </script>
+
+
 
 
 {% endblock %}

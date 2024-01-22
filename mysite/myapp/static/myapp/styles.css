@@ -264,7 +264,7 @@ body {
 
 .results-container a {
   display: contents;
-  width: 700px; /* Establece el ancho del botón */
+  /* Establece el ancho del botón */
   text-align: center; /* Centra el texto dentro del botón */
   margin: 0 auto 2px auto; /* Centra el botón dentro de su contenedor y proporciona espacio en la parte inferior */
   color: white;

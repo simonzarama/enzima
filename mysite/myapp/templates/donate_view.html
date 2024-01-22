@@ -1,0 +1,129 @@
+{% extends 'base_user.html' %}
+{% load custom_filters %}
+{% load static %}
+
+{% block content %}
+
+
+<body>
+    
+
+<br>
+<br>
+
+    
+
+    <div class="container" style="background-color: rgb(39, 39, 39); color: white; border: 1px solid white; width: 400px; margin: auto; padding: 20px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);">
+        <div class="row">
+            <div class="col-sm-12">
+                <h2 class="ms-text-center">{{ trial.title }}</h2>
+                <br>
+                
+
+                <!-- Mostrar la meta de crowdfunding y el progreso actual -->
+                
+
+                <!-- Formulario de Donación -->
+                <form method="post" class="ms-text-center donation-form">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="id_amount">Enter your donation:</label>
+                        <input type="number" name="amount" id="id_amount" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_donor_email">Email:</label>
+                        <input type="email" name="donor_email" id="id_donor_email" class="form-control" required>
+                    </div>
+                    
+                </form>
+                <div id="paypal-button-container"></div>
+            </div>
+        </div>
+    </div>
+    
+        
+    
+<!-- Incluye el SDK de JavaScript de PayPal -->
+<script src="https://www.paypal.com/sdk/js?client-id=AQYx1OFdAcVjRsZUN9PmXD1O9Xp4p6Nr7ztGglWAGoPBrJ2MnZGCKkGBqVtL9mDSpXcAsVl3NZnEnfaW&currency=USD"></script>
+
+<script>
+    paypal.Buttons({
+        createOrder: function(data, actions) {
+            var donationAmount = document.getElementById('id_amount').value; // Asegúrate de que este ID coincida con el ID de tu campo de formulario
+            return actions.order.create({
+                purchase_units: [{
+                    amount: {
+                        currency_code: 'USD',
+                        value: donationAmount
+                    }
+                }]
+            });
+        },
+        onApprove: function(data, actions) {
+            var donationAmount = document.getElementById('id_amount').value; // Se obtiene de nuevo para asegurar la consistencia
+            return actions.order.capture().then(function(details) {
+                // Implementa lo que sucede después de una transacción exitosa
+
+                // Llamada AJAX para actualizar el backend
+                console.log("Sending AJAX to URL:", '{% url "update_donation" trial.id %}');
+                console.log("Sending data:", JSON.stringify({ amount: donationAmount }));
+                fetch('{% url "update_donation" trial.id %}', {  // La URL incluye 'trial_id'
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        amount: donationAmount  // 'trial_id' ya está incluido en la URL
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Actualiza la UI o redirige al usuario según sea necesario
+                        alert(data.message);
+                    } else {
+                        throw new Error(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Ha ocurrido un error al procesar la donación.');
+                });
+            });
+        }
+    }).render('#paypal-button-container');
+</script>
+
+
+
+<style>
+    body {
+        color: white
+    }
+
+
+    .donation-form {
+    width: 100%;
+    max-width: 360px; /* Ajusta según el ancho deseado */
+    margin: auto;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #333;
+}
+
+
+</style>
+
+</body>
+{% endblock %}

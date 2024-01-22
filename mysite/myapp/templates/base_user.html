@@ -27,25 +27,33 @@
         </form>
         
         <!-- Botones de perfil, notificaciones, carrito y mensajes -->
-        <div class="custom-nav-links">
-            <a class="nav-link" href="{% url 'notifications' %}">
-                <i class="fas fa-bell"></i>
-            </a>
-            <a class="nav-link" href="{% url 'messages' %}">
-                <i class="fas fa-envelope"></i>
-            </a>
-            <a class="nav-link" href="{% url 'cart' %}">
-                <i class="fas fa-shopping-cart"></i>
-            </a>
-            {% if request.user.is_authenticated %}
-                 <a class="nav-link" href="{% url 'profile' request.user.username %}">
-            <img src="{% static 'myapp/images/default_profile_icon.png' %}" alt="Perfil" width="50" class="profile-image">
-            </a>
-            {% else %}
-                <a class="nav-link" href="{% url 'profile' 'guest' %}">Perfil público</a>
+<div class="custom-nav-links">
+    <a class="nav-link nav-icon" href="{% url 'notifications' %}">
+        <div class="notcont">
+            <i class="fas fa-bell"></i>
+            {% if notifications_unread %}
+                <span class="notification-dot"></span>
             {% endif %}
-
         </div>
+    </a>
+    <a class="nav-link nav-icon" href="{% url 'messages' %}">
+        <div class="notcont">
+            <i class="fas fa-envelope"></i>
+            <span class="message-notification-dot" style="display: none;"></span>
+        </div>
+    </a>
+    <a class="nav-link nav-icon" href="{% url 'cart' %}">
+        <i class="fas fa-shopping-cart"></i>
+    </a>
+    {% if request.user.is_authenticated %}
+    <a class="nav-link nav-icon" href="{% url 'profile' request.user.username %}">
+        <img src="{{ profile_picture_url }}" alt="Perfil" width="50" class="profile-image">
+    </a>
+    {% else %}
+        <a class="nav-link" href="{% url 'profile' 'guest' %}">Perfil público</a>
+    {% endif %}
+</div>
+
     </header>
 
     <main>
@@ -66,8 +74,137 @@
             console.log("Query:", query); // añade esta línea
             window.location.href = `/search_results/?q=${query}`;
 }
+</script>
+{% if user.is_authenticated %}
+    <script>
+        function checkForNewNotifications() {
+            console.log("Verificando nuevas notificaciones..."); // Depuración: Verificar que la función se está llamando regularmente
+            $.ajax({
+                url: '/check-unread-message-notifications/', // Asegúrate de que esta URL sea correcta
+                success: function(response) {
+                    console.log("Respuesta de notificaciones:", response); // Depuración: Mostrar la respuesta del servidor
+                    if(response.has_new_messages) {
+                        console.log("Nuevas notificaciones encontradas. Mostrando punto."); // Depuración: Confirmar que se encontraron nuevas notificaciones
+                        $('.nav-icon .notcont .message-notification-dot').show();
+                    } else {
+                        console.log("No se encontraron nuevas notificaciones. Ocultando punto."); // Depuración: Confirmar que no se encontraron nuevas notificaciones
+                        $('.nav-icon .notcont .message-notification-dot').hide();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error en AJAX:", xhr, status, error); // Depuración: Mostrar errores de AJAX si los hay
+                }
+            });
+        }
+
+        // Realizar la verificación cada 60 segundos
+        setInterval(checkForNewNotifications, 3000000);
     </script>
-    
+{% endif %}
+
+
+
+<style>
+
+/* Estilos base para la navbar */
+.custom-nav-links {
+    display: flex;
+    align-items: center;
+}
+
+.custom-search {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 800px; /* Tamaño predeterminado para pantallas grandes */
+    margin-left: 150px;
+}
+
+/* Ajustes para pantallas de tamaño medio */
+@media screen and (max-width: 1024px) {
+    .custom-search {
+        width: 400px; /* Tamaño para pantallas medianas */
+    }
+}
+
+/* Ajustes para pantallas más pequeñas */
+@media screen and (max-width: 768px) {
+    .custom-search {
+        width: 100%; /* Ocupa todo el ancho disponible */
+        margin-left: 0; /* Elimina el margen izquierdo */
+    }
+
+    .custom-nav-links {
+        justify-content: space-between; /* Distribuye los elementos uniformemente */
+    }
+}
+
+.custom-nav-links .nav-icon {
+    margin-right: 5px; /* Reduce el margen entre los íconos */
+}
+
+/* Ajustes para pantallas aún más pequeñas */
+@media screen and (max-width: 480px) {
+    .custom-nav-links {
+        flex-direction: column; /* Los elementos se apilan verticalmente */
+        align-items: flex-start; /* Alinea al inicio */
+    }
+
+    .custom-search {
+        order: -1; /* Mueve la barra de búsqueda al principio */
+    }
+}
+
+
+
+.nav-icon {
+    color: white; /* Establece el color de los íconos a blanco */
+    font-size: inherit; /* Mantiene el tamaño del fuente actual */
+}
+
+.custom-nav-links .nav-icon,
+.custom-nav-links .nav-icon i {
+    color: white; /* Color de ícono blanco */
+    font-size: inherit; /* Tamaño de fuente heredado para mantener el tamaño actual */
+    display: flex;
+  align-items: center; /* Alinea los elementos verticalmente al centro */
+  justify-content: space-between; /* Espacia los elementos uniformemente */
+}
+
+
+.custom-logo, .custom-nav-links a {
+ 
+    margin-right: 0px;
+}
+
+.notcont {
+    position: relative;
+    display: inline-block; /* o simplemente inline, dependiendo de tus necesidades */
+}
+
+.notification-dot {
+    position: absolute;
+    top: 0px; /* Ajusta estos valores para posicionar el punto como desees */
+    right: -10px;
+    width: 10px; /* o el tamaño que prefieras */
+    height: 10px;
+    background-color: rgb(61, 61, 255); /* o el color que prefieras */
+    border-radius: 50%;
+    /* Agrega otros estilos según tus necesidades */
+}
+
+.message-notification-dot {
+    position: absolute;
+    top: 0px; /* Ajusta estos valores para posicionar el punto como desees */
+    right: -12px;
+    width: 10px; /* o el tamaño que prefieras */
+    height: 10px;
+    background-color: rgb(61, 61, 255); /* o el color que prefieras */
+    border-radius: 50%;
+}
+
+
+</style>
    
 </body>
 </html>

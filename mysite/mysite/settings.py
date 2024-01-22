@@ -13,6 +13,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import os
 
+
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -24,11 +27,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-zn!!^(#4=&#0qlya!20$yw__+sg#u2y&d0ap$f=$n#+058ai9%')
 
 
+COINBASE_API_KEY = os.environ.get('COINBASE_API_KEY')
+COINBASE_API_SECRET = os.environ.get('COINBASE_API_SECRET')
+
+PAYPAL_RECEIVER_EMAIL = 'sb-suzmn28966686@business.example.com'
+PAYPAL_TEST = True  # True para sandbox, False para producción
+
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+DEBUG = 'True'
 
-ALLOWED_HOSTS = ['127.0.0.1', '.vercel.app']
+# remplazar "True" con lo siguiente para subirlo = os.environ.get('DEBUG', 'False') == 'True'
+
+ALLOWED_HOSTS = ['127.0.0.1', '.vercel.app', 'simonzarama.pythonanywhere.com']
 
 # Solo para desarrollo, no usar en producción
 CSRF_TRUSTED_ORIGINS = [
@@ -41,6 +53,9 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'paypal.standard.ipn',
+    'dal',
+    'dal_select2',
     'django_select2',
     'myapp',
     'django.contrib.admin',
@@ -93,6 +108,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'myapp.context_processors.user_notifications',
+                'myapp.context_processors.unread_messages',
+                'myapp.context_processors.profile_picture',
             ],
         },
     },

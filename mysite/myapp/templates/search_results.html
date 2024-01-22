@@ -1,5 +1,7 @@
 {% extends 'base_user.html' %}
 {% load static %}
+{% load custom_filters %}
+
 <link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
@@ -13,13 +15,13 @@
     <div class="center-content">
         <div class="rectangle-container">
             <div class="community-button" data-btn="community">
-                <a href="#">Comunidades</a>
+                <a href="#">Communities</a>
             </div>
             <div class="community-button" data-btn="users">
-                <a href="#">Usuarios</a>
+                <a href="#">Users</a>
             </div>
             <div class="community-button" data-btn="posts">
-                <a href="#">Publicaciones</a>
+                <a href="#">Posts & Trials</a>
             </div>
             <div class="highlight-line"></div> <!-- Esta es la línea amarilla -->
         </div>
@@ -39,15 +41,15 @@
                 {% for community in communities %}
                 <li class="feature-box">
                     <a href="{% url 'view_community' community_name=community.name %}">
-                      <i class="fas fa-vial icon"></i> <!-- Asegúrate de que la clase icon está aquí -->
-                      <span>{{ community.name }} - {{ community.community_type }}</span>
+                        <i class="fas fa-users"></i> <!-- Asegúrate de que la clase icon está aquí -->
+                      <span>{{ community.name }}</span>
                     </a>
                   </li>
                   
                 {% endfor %}
             </ul>
         {% else %}
-            <p>No se encontraron comunidades con la búsqueda "{{ query }}".</p>
+            
         {% endif %}
     </div>
 
@@ -57,17 +59,38 @@
     <div class="user-result">
         <img src="{% static 'myapp/images/default_profile_icon.png' %}" alt="{{ user.username }}'s profile picture" class="user-profile-pic">
         <a href="{% url 'profile' username=user.username %}" class="user-name">{{ user.username }}</a>
-        <a href="#" class="follow-btn">Follow</a>
     </div>
     {% endfor %}
 </div>
 
 <div class="results-container" id="posts-results">
     {% for post in posts %}
-    <div class="post-container">
-        <h3><a href="{% url 'post_detail' post_id=post.id %}" class="btn">{{ post.title }}</a></h3>
-        <p>{{ post.content }}</p>
-    </div>
+        <div class="post-item">
+            <p>
+                Published by:
+                <a href="{% url 'profile' post.user.username %}" class="link-blanco">{{ post.user.username }}</a>
+                on
+                <a href="{% url 'view_community' post.community.name %}" class="link-blanco">{{ post.community.name }}</a>
+            </p>
+            <div class="post-link-container">
+                <a href="{% url 'post_detail' post.id %}" class="post-link">
+                    <h3 id="post-title-{{ post.id }}">{{ post.title }}</h3>
+                    <div class="media-container">
+                        {% if post.media_file %}
+                            {% if post.media_file.url|lower|endswith:".mp4" or post.media_file.url|lower|endswith:".webm" %}
+                                <video controls id="post-video-{{ post.id }}" class="post-media">
+                                    <source src="{{ post.media_file.url }}" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>
+                            {% else %}
+                                <img src="{{ post.media_file.url }}" alt="Media file" class="post-image" id="post-image-{{ post.id }}">
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <p id="post-content-{{ post.id }}" class="post-description">{{ post.content|linebreaks }}</p>
+                </a>
+            </div>
+        </div>
     {% endfor %}
 </div>
 
@@ -122,50 +145,205 @@ buttons.forEach(function(button) {
 
 <style>
 
-
-/* Estilos para los íconos */
-.icon {
-  width: 50px;  /* Tamaño del ícono */
-  height: auto;  /* Mantiene la relación de aspecto */
-  margin-right: 10px;  /* Separación entre el ícono y el texto */
-  color: white;  /* Color del ícono */
-  /* Puedes añadir aquí otros estilos que necesites para el ícono */
+body{
+    color: white;
 }
 
-/* Estilos para .feature-box que contiene el ícono y el texto */
-.feature-box {
-  display: flex;
-  align-items: center; /* Alinea los hijos (el ícono y el texto) verticalmente */
-  justify-content: start; /* Alinea los hijos horizontalmente al inicio */
-  margin: 10px 0;
-  padding: 20px;  /* Espacio dentro del .feature-box */
-  text-decoration: none; /* Remueve el subrayado de los enlaces */
-  color: inherit; /* El texto usa el color del elemento padre */
-  background: transparent;
-  border-radius: 0;  /* Radio del borde */
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Sombra del cuadro */
-  text-align: left; /* Alinea el texto a la izquierda */
-  width: 100%; /* O un ancho específico si es necesario */
-  cursor: pointer; /* Cambia el cursor al pasar el ratón encima */
+/* Estilos comunes para las secciones de resultados */
+.feature-box, .user-result, .post-container {
+    display: flex;
+    align-items: center; /* Alinea los elementos hijos verticalmente */
+    justify-content: center; /* Centra los elementos horizontalmente */
+    text-align: center; /* Asegura que el texto interno esté centrado */
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #333;
+    color: white; /* Asegúrate de que el color del texto sea visible sobre el fondo */
+    cursor: pointer;
+    width: 700px; /* Ajusta esto según el ancho deseado */
+    margin-left: auto; /* Centra el bloque horizontalmente */
+    margin-right: auto; /* Centra el bloque horizontalmente */
+}
+/* Estilos específicos para el contenido dentro de cada resultado */
+.post-container h3, .post-container p, .feature-box > a, .user-result > a {
+    flex-grow: 1;
+    margin-right: 10px; /* Espacio entre los elementos */
 }
 
-/* Estilos para el contenedor principal que afecta a cómo se muestran los .feature-box */
-.container {
-  display: flex;
-  flex-direction: column;
-  align-items: center; /* Centra los elementos hijos horizontalmente */
-  justify-content: center; /* Centra los elementos hijos verticalmente */
+/* Ajuste para la imagen de perfil del usuario */
+
+
+/* Estilo para la fecha, si decides añadirla en algún lugar */
+.notification-date {
+    color: #bbb;
+    margin-top: 5px;
+    white-space: nowrap;
 }
 
-/* Estilos para el contenedor de resultados */
-.results-container {
-  width: 82%; /* Ancho completo del contenedor */
-  padding: 0;  /* Remueve el padding por defecto */
-  list-style: none; /* Remueve los estilos de lista por defecto */
-  margin: 0; /* Remueve el margen por defecto */
-  display: flex; /* Habilita flexbox */
-  flex-direction: column; /* Ordena los elementos hijos en columna */
-  align-items: center; /* Centra los elementos hijos horizontalmente */
+/* Estilo para el ícono en los resultados de comunidades */
+.fas.fa-users {
+    color: #fff; /* Color del ícono */
+    font-size: 20px; /* Tamaño del ícono */
+    margin-right: 10px; /* Espacio entre el ícono y el mensaje */
+}
+
+
+/* Ajuste para centrar los resultados de usuarios y publicaciones */
+
+/* Estilo para el contenedor de resultados de usuarios */
+
+/* Estilo para el contenedor de resultados de publicaciones */
+#posts-results {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centra los elementos hijos horizontalmente */
+    width: 100%; /* Ajusta el ancho para centrar */
+    padding: 0;
+    margin: 0;
+}
+
+/* Estilo para cada publicación */
+.post-container {
+    width: 700px; /* Ajusta el ancho según lo necesites */
+    margin: 10px auto; /* Centra el elemento horizontalmente */
+}
+
+/* Estilo para la caja de características de cada comunidad */
+
+
+
+/* Estilo para el ícono y el texto dentro de .feature-box */
+.feature-box i, .feature-box span {
+    margin-right: 10px; /* Ajusta según necesidad para separación */
+}
+
+/* Si deseas que solo el texto (span) esté centrado y no el ícono */
+.feature-box span {
+    flex-grow: 1; /* Permite que el span ocupe todo el espacio disponible */
+    text-align: center; /* Centra el texto dentro del span */
+}
+
+/* Estilo para el contenedor de resultados de usuarios */
+#users-results {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centra los elementos hijos horizontalmente */
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+/* Estilo para cada resultado de usuario */
+/* Estilo para cada resultado de usuario */
+.user-result {
+    display: flex;
+    align-items: center; /* Alinea verticalmente los elementos */
+    justify-content: flex-start; /* Comienza los elementos desde la izquierda */
+    width: 500px; /* Ajusta el ancho según lo necesites */
+    margin: 10px auto; /* Centra el elemento horizontalmente */
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #333;
+    color: white;
+    cursor: pointer;
+}
+
+/* Ajuste para la imagen de perfil del usuario */
+.user-profile-pic {
+    border-radius: 50%; /* Hace la imagen redonda */
+    width: 30px; /* Ajusta el tamaño de la imagen */
+    height: 30px; /* Ajusta el tamaño de la imagen */
+    margin-right: 10px; /* Espacio entre la imagen y el nombre */
+}
+
+/* Ajuste para el nombre del usuario */
+.user-name {
+    text-align: center; /* Centra el texto */
+    color: white; /* Asegúrate de que el color del texto sea visible sobre el fondo */
+    text-decoration: none; /* Remueve el subrayado del enlace */
+    flex-grow: 1; /* Permite que el nombre ocupe el espacio restante */
+}
+
+
+/*
+
+body {
+    color: white;
+}
+
+/* Estilos para el contenedor de resultados de posts */
+#posts-results {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centra los elementos hijos horizontalmente */
+    width: 100%; /* Ajusta el ancho para centrar */
+    padding: 0;
+    margin: 0;
+}
+
+/* Estilos específicos para cada post */
+.post-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Alinea los elementos hijos verticalmente */
+    text-align: center; /* Asegura que el texto interno esté centrado */
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #333;
+    color: white; /* Asegúrate de que el color del texto sea visible sobre el fondo */
+    cursor: pointer;
+    width: 700px; /* Ajusta esto según el ancho deseado */
+    margin-left: auto; /* Centra el bloque horizontalmente */
+    margin-right: auto; /* Centra el bloque horizontalmente */
+}
+
+/* Estilos para los enlaces dentro de los posts */
+.post-link {
+    display: block;
+    width: calc(100% - 10px);
+    margin: 0 auto;
+    text-decoration: none;
+    color: inherit; /* Hereda el color del texto */
+}
+
+/* Estilos para los títulos de los posts */
+.post-item h3 {
+    margin-right: 10px; /* Espacio entre los elementos */
+}
+
+/* Estilos para las imágenes y videos dentro de los posts */
+.post-media, .post-image {
+    max-width: 100%; /* Asegura que el contenido multimedia no sobrepase el ancho del contenedor */
+    height: auto; /* Mantiene la relación de aspecto */
+}
+
+/* Estilo para las fechas y otros elementos si los añades más adelante */
+.notification-date {
+    color: #bbb;
+    margin-top: 5px;
+    white-space: nowrap;
+}
+
+.post-link-container {
+    border: 1px solid white;
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 4px;
+    background-color: #333;
+    color: white;
+    width: 660px; /* Ajusta esto según el ancho deseado */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.link-blanco {
+    color: white;
+    text-decoration: underline;
 }
 
 </style>

@@ -1,7 +1,92 @@
+
+
 {% extends 'base_user.html' %}
+{% load custom_filters %}
+{% load static %}
+
+
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
 
 {% block content %}
-    <h1>Tus notificaciones</h1>
-    <p>Aquí se mostrarán todas las notificaciones del usuario.</p>
-    <!-- Puedes añadir más elementos según lo requieras -->
+
+
+<style>
+
+.estilo-titulo {
+    grid-column: span 3;
+    text-transform: capitalize;
+    text-align: center;
+    padding-bottom: 5px;
+}
+
+body {
+    color:white;
+}
+
+.notification-result {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: #333;
+    margin-left: 200px; /* Margen izquierdo */
+    margin-right: 200px; /* Margen derecho */
+}
+
+.notification-details {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    color: white;
+}
+
+.notification-date {
+    color: #bbb;
+    margin-top: 5px; /* Espacio entre el mensaje y la fecha */
+    white-space: nowrap;
+}
+
+/* Estilos para el ícono de campana, ajusta según sea necesario */
+.fas.fa-bell {
+    color: #fff; /* Color del ícono */
+    font-size: 30px; /* Tamaño del ícono */
+    margin-right: 10px; /* Espacio entre el ícono y el mensaje */
+}
+
+</style>
+<br>
+<br>
+
+<h2 class="estilo-titulo">Notifications</h2>
+
+    <br>
+    <br>
+
+    {% for notification in notifications|dictsortreversed:"created_at" %}
+    <div class="notification-result" onclick="location.href='{% url 'trial_contact' trial_id=notification.trial_id %}'">
+        <!-- Ícono de campana en lugar de imagen de perfil -->
+        <i class="fas fa-bell application-user-profile-image"></i>
+        
+        <!-- Detalles de la notificación -->
+        <div class="notification-details">
+            <!-- Mensaje de la notificación -->
+            <div class="message-container">
+                {{ notification.message|truncatechars:100|default:"No message provided." }}
+            </div>
+
+            <!-- Fecha de la notificación -->
+            <div class="notification-footer">
+                <span class="notification-date">{{ notification.created_at|date:"Y-m-d H:i" }}</span>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+
+
 {% endblock %}

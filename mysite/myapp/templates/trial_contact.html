@@ -1,0 +1,258 @@
+
+
+{% extends 'base_user.html' %}
+{% load custom_filters %}
+{% load static %}
+
+
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+
+{% block content %}
+
+<br>
+<h2 class="applications-title">Applications for <a href="{% url 'view_trial_detail' id=trial.id %}">{{ trial.title }}</a></h2>
+<br>
+<br>
+<div class="applications-container">
+    {% for application in applications|dictsortreversed:"created_at" %}
+        <div class="application-result" onclick="openApplicationDetails('{{ application.id }}')">
+            <!-- Imagen de perfil del usuario -->
+            <img src="{% static 'myapp/images/default_profile_icon.png' %}" alt="Perfil" class="application-user-profile-image">
+            
+            <!-- Detalles de la aplicación incluyendo el nombre de usuario y el mensaje -->
+            <div class="application-details">
+                <!-- Nombre de usuario como enlace al perfil del usuario -->
+                <span class="application-user-username">
+                    <a href="{% url 'profile' username=application.user.username %}" class="user-link">{{ application.user.username }}</a>
+                </span>
+
+                <!-- Contenedor del mensaje con truncamiento automático si es demasiado largo -->
+                <div class="message-container">
+                    {{ application.message|linebreaksbr|truncatechars_html:100|default:"No message provided." }}
+                </div>
+
+                <div class="application-footer">
+                    <!-- Fecha de creación de la aplicación -->
+                    <span class="application-date">{{ application.created|date:"Y-m-d H:i" }}</span>
+
+                    <!-- Condición para mostrar 'Application' si el usuario quiere aplicar -->
+                    {% if application.wants_to_apply %}
+                        <span class="application-label">Application</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <p>No applications or messages found.</p>
+    {% endfor %}
+</div>
+
+
+<div id="applicationDetailsModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span class="close-button" onclick="closeApplicationDetails()">&times;</span>
+        <h2>Application Details</h2>
+
+        <!-- Detalles de la aplicación -->
+        <div id="applicationDetailsContent">
+            <!-- La información de la aplicación se llenará dinámicamente con JavaScript -->
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+    // Función para abrir la ventana modal de detalles de aplicación
+    function openApplicationDetails(applicationId) {
+        // Hacer una solicitud AJAX para obtener los detalles de la aplicación
+        fetch(`/get_application_details/${applicationId}/`)
+        .then(response => response.json())
+        .then(data => {
+            console.log("Datos recibidos:", data); 
+            if (data.success) {
+                // Construir el contenido de la ventana modal
+                var applicationDetailsContent = document.getElementById('applicationDetailsContent');
+                applicationDetailsContent.innerHTML = `
+                    <p>User: ${data.application.user}</p>
+                    ${data.application.wants_to_apply ? `<p>Meets Requirements: ${data.application.meets_requirements ? 'Yes' : 'No'}</p>` : ''}
+                    <p>Message:</p>
+                    <div class="application-message-content">${data.application.message}</div>
+                `;
+
+                // Mostrar la ventana modal
+                document.getElementById('applicationDetailsModal').style.display = 'block';
+            } else {
+                // Manejar error si la solicitud no fue exitosa
+                console.error('Error fetching application details.');
+            }
+        })
+        .catch(error => {
+            // Manejar cualquier error que ocurra durante la solicitud AJAX
+            console.error('Error:', error);
+        });
+    }
+
+    // Función para cerrar la ventana modal de detalles de aplicación
+    function closeApplicationDetails() {
+        document.getElementById('applicationDetailsModal').style.display = 'none';
+    }
+</script>
+
+
+
+<style>
+
+.modal {
+    /* Otras propiedades de estilo */
+    max-width: 50%; /* Ajusta según tus necesidades */
+    margin: auto; /* Centra la ventana modal horizontalmente */
+    word-wrap: break-word;
+    max-width: 100%; /* Asegúrate de que el contenedor no sea más ancho que su contenedor padre */
+    overflow-wrap: break-word; 
+}
+
+.modal-content {
+    /* Otras propiedades de estilo */
+    max-width: 50%; /* Asegúrate de que el contenido no exceda el ancho de la ventana modal */
+}
+
+.message-container {
+    word-wrap: break-word;
+    max-width: 100%; /* Asegúrate de que el contenedor no sea más ancho que su contenedor padre */
+    overflow-wrap: break-word; /* Asegura que las palabras largas se rompan correctamente */
+}
+
+.application-message-content {
+    white-space: pre-wrap; /* Mantiene los espacios y saltos de línea */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%; /* Asegura que el contenido no se desborde del modal */
+}
+
+
+.applications-container {
+    padding-left: 50px;
+    padding-right: 50px;
+    color: red;
+}
+
+.message-container {
+    white-space: nowrap;
+    overflow: hidden;
+    color: white;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 100px); /* Ajusta el ancho máximo según el tamaño de la barra */
+}
+
+.application-result {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: #333;
+}
+
+.application-user-profile-image {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.application-details {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.application-user-username .user-link {
+    color: white;
+    text-decoration: none;
+    margin-right: 100px; /* Ajusta este valor para más espacio */
+    font-weight: bold;
+}
+
+.application-message-container {
+    color: #ddd;
+    margin-right: auto; /* Empuja todo lo demás a la derecha */
+}
+
+.application-date {
+    color: #bbb;
+    margin-left: 15px; /* Ajusta este valor para más espacio */
+    white-space: nowrap;
+}
+
+
+
+/* VENTANA DE MENSAJE*/
+
+
+.application-label {
+    float: right;
+    margin-right: 10px;
+    /* Otros estilos que desees aplicar */
+}
+
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+.modal-content {
+    background-color: #2a2a2a;
+    margin: 15% auto; /* 15% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 820px; /* Could be more or less, depending on screen size */
+    max-width: 100%; /* Ensure it does not exceed the screen size */
+    color: white; /* Cambia el color del texto a blanco */
+}
+
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.applications-title {
+
+    text-transform: capitalize;
+}
+
+
+.applications-title a {
+    color: white; /* Cambia el color del texto a blanco */
+    text-decoration: none; /* Elimina el subrayado por defecto */
+    text-transform: capitalize;
+}
+
+.applications-title a:hover {
+    text-decoration: underline; /* Añade una línea debajo del texto al hacer hover */
+    text-decoration-color: white; /* Asegura que la línea sea blanca */
+}
+</style>
+{% endblock %}

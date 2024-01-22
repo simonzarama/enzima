@@ -1,0 +1,478 @@
+<head>
+    
+    {% load static %}
+    {% load custom_filters %}
+    <link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+    </head>
+
+
+
+    
+
+{% block content %}
+
+
+
+
+
+
+<div class="hc-centrar-contenido">
+
+    {% if trials %}
+<div class="ordenamiento">
+    <button data-order="-published_at" class="btn {% if request.GET.order == '-published_at' or not request.GET.order %}selected{% endif %}">New Trials</button>
+    <button data-order="-interaction_count" class="btn {% if request.GET.order == '-interaction_count' %}selected{% endif %}">Popular Trials</button>
+</div>
+{% endif %}
+
+<br>
+    {% for trial in trials %}
+    <article class="hc-post">
+        <!-- Comunidad -->
+        {% if trial.communities.all %}
+            <div class="hc-author-info">
+                Communities:
+                {% for community in trial.communities.all %}
+                    <a href="{% url 'view_community' community.name %}" class="hc-link-blanco">{{ community.name }}</a>
+                    {% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Contenido del Trial -->
+        <div class="hc-content-box">
+            <a href="{% url 'view_trial_detail' trial.id %}" class="hc-post-link">
+                <h3 id="hc-trial-title-{{ trial.id }}">{{ trial.title }}</h3>
+                <br>
+                <p>{{ trial.description|truncatechars:360 }}</p>
+
+                <!-- Archivo multimedia -->
+                {% if trial.media_file %}
+                    {% if trial.media_file.url|lower|endswith:".mp4" or trial.media_file.url|lower|endswith:".webm" %}
+                        <video controls id="hc-trial-file-{{ trial.id }}">
+                            <source src="{{ trial.media_file.url }}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    {% else %}
+                        <img src="{{ trial.media_file.url }}" alt="Media file" class="hc-media-thumbnail" id="hc-trial-file-{{ trial.id }}">
+                    {% endif %}
+                {% endif %}
+            </a>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="hc-post-actions">
+            <!-- Número de comentarios -->
+            <p class="hc-comment-count">{{ trial.comments.count }} Comment{{ trial.comments.count|pluralize }}</p>
+            <!-- Botones -->
+            <a href="{% url 'view_trial_detail' trial.id %}" class="hc-comment-btn">Comment</a>
+            <button class="hc-save-btn" data-trial-id="{{ trial.id }}">Save</button>
+            <button id="shareButton" data-id="{{ trial.id }}">Share</button>
+            <a href="{% url 'donate_view' trial.id %}" class="hc-donate-btn">Donate</a>
+        </div>
+    </article>
+
+    <br><br>
+
+    <!-- ... otros elementos ... -->
+
+    {% empty %}
+        <p>No trials available.</p>
+    {% endfor %}
+</div>
+
+
+
+<script>
+    console.log("Inicio de save para trials con hc-save-btn");
+
+    // Evento para guardar contenido
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('hc-save-btn')) {
+            const button = e.target;
+            const trialId = button.getAttribute('data-trial-id');
+            const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content");
+
+            console.log("Trial ID:", trialId);
+
+            fetch('/trial/' + trialId + '/save/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log(data);
+                button.textContent = data.saved ? "Unsave" : "Save";
+            })
+            .catch(error => {
+                console.log("Error al guardar el trial:", error);
+            });
+        }
+    });
+
+    // Evento para compartir enlaces
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'shareButton') {
+            const trialId = e.target.getAttribute('data-id');
+            const urlToCopy = window.location.origin + '/trials/' + trialId + '/';
+
+            const tempInput = document.createElement('input');
+            tempInput.value = urlToCopy;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            alert('Link copied to clipboard!');
+        }
+    });
+
+    console.log("Inicio de save para trials con hc-save-btn");
+
+    // Resto del código...
+
+    document.body.addEventListener('click', function(e) {
+    if (e.target.closest('.ordenamiento') && e.target.classList.contains('btn')) {
+        const order = e.target.getAttribute('data-order');
+        console.log("Orden seleccionado:", order);
+
+        console.log("Realizando solicitud fetch a '/trials?order=' con orden:", order);
+        fetch(`/trials?order=${order}`)
+        .then(response => {
+            console.log("Respuesta recibida del servidor");
+            return response.text();
+        })
+        .then(html => {
+            console.log("Actualizando contenido de trials con el nuevo HTML");
+            document.querySelector('.hc-centrar-contenido').innerHTML = html;
+        })
+        .catch(error => console.error('Error:', error));
+    }
+});
+
+
+
+
+    // Evento para seleccionar un trial
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('hc-post-link')) {
+            const allTrials = document.querySelectorAll('.hc-post');
+            allTrials.forEach(trial => trial.classList.remove('selected'));
+            e.target.closest('.hc-post').classList.add('selected');
+        }
+    });
+
+    // Guarda la subvista actual en el almacenamiento local
+    document.addEventListener('DOMContentLoaded', function() {
+        localStorage.setItem('lastView', 'trials');
+    });
+</script>
+
+
+
+
+<style>
+.ordenamiento {
+    display: flex;
+    justify-content: center; /* Centra los botones horizontalmente */
+    align-items: center; /* Alinea los botones verticalmente */
+    gap: 20px; /* Espacio entre los botones */
+    flex-direction: row; /* Asegura que los botones estén en línea */
+}
+
+.ordenamiento .btn {
+    display: inline-block;
+    border: 1px solid white;
+    color: white;
+    /* Asegúrate de no tener márgenes adicionales que afecten la disposición */
+    margin: 0; /* Elimina los márgenes */
+    padding: 5px 10px; /* Ajusta el padding según tus necesidades */
+}
+
+/* Estilos para el botón seleccionado */
+.ordenamiento .btn.selected {
+    background-color:  rgb(234, 216, 127);
+    color: black;
+}
+
+/* Estilo para la línea divisoria blanca */
+.hc-post-separator {
+    height: 0.5px; /* Puedes ajustar el grosor de la línea aquí */
+    background-color: white;
+    margin: 20px; /* Espaciado arriba y abajo de la separación */
+}
+
+/* Añadir padding y fondo verde al botón Donate */
+/* Estilo específico para .hc-donate-button que sobreescribe otros estilos */
+.article .hc-post-actions .hc-donate-button:not(.results-container a) {
+    display: inline-block; /* o block, según necesites */
+    width: auto; /* Sobre escribe el ancho heredado de 700px */
+    text-align: center;
+    margin: 0; /* Ajusta según sea necesario */
+    color: white !important; /* El !important asegura que el color tiene prioridad */
+
+    padding: 30px !important; /* El !important asegura que el padding tiene prioridad */
+    text-decoration: none;
+    border: none; /* Elimina el borde si es necesario, o ajusta según lo necesites */
+    border-radius: 5px; /* Ajusta según sea necesario */
+    transition: background-color 0.3s;
+}
+
+
+
+/* Añadir margen a la izquierda para .hc-author-info */
+.hc-author-info {
+    margin-left: 20px;
+    position: relative; /* Posicionamiento relativo para mantener el límite derecho */
+}
+
+/* Asegurar que el contenido no se desplace a la derecha */
+.hc-author-info::after {
+    content: "";
+    position: absolute;
+    right: -20px; /* Deshace el margen a la izquierda */
+    width: 20px; /* El mismo ancho que el margen extra */
+    top: 0;
+}
+
+
+.hc-content-box {
+  border: 1px solid white; /* Añade un borde blanco */
+  margin: 20px auto; /* Añade margen arriba y abajo, y auto para izquierda y derecha para centrar */
+  padding: 20px; /* Añade espacio interior para que el contenido no toque el borde */
+  max-width: calc(100% - 40px); /* Ajusta el ancho máximo para que cuente el padding y no se salga */
+  box-sizing: border-box; /* Asegura que el padding y border se incluyan en el ancho total */
+  background-color: none; /* En caso de que desees un fondo blanco */
+}
+
+.hc-content-box h3 {
+    text-transform: uppercase; /* Convierte el texto a mayúsculas */
+}
+
+
+.results-container a {
+display: contents;
+
+}
+
+
+.hc-comment-count {
+margin-bottom: 0;
+}
+
+.hc-centrar-contenido .hc-post .hc-content-box {
+  margin: 20px;
+  width: calc(400px * 2) ;
+  box-sizing: border-box;
+}
+
+
+.hc-centrar-contenido .hc-post-actions .hc-like-button,
+.hc-centrar-contenido .hc-post-actions .hc-save-btn,
+.hc-centrar-contenido .hc-post-actions .hc-more-options-button {
+    background-color:transparent; /* Color de fondo verde */
+    border: 1px solid white;
+    color: white; /* Color del texto blanco */
+    padding: 0 20px; /* Padding horizontal basado en el contenido */
+    height: 40px; /* Altura fija de 100px */
+    line-height: 40px; /* Alinea el texto verticalmente */
+    border-radius: 0; /* Esquinas rectangulares */ /* Sin bordes */
+    cursor: pointer;
+    text-decoration: none; /* Quitar subrayado de enlaces */
+    display: inline-block; /* Para que respete el padding y margin */
+    margin: 0 5px; /* Espaciado entre botones */
+    box-sizing: border-box; /* Para incluir el padding y border en la altura y anchura total */
+    transition: background-color 0.2s, color 0.2s; /* Transición suave para hover */
+}
+
+.hc-centrar-contenido .hc-post-actions .hc-like-button {
+    width: auto;
+}
+
+.hc-centrar-contenido .hc-post-actions .hc-like-button:hover,
+.hc-centrar-contenido .hc-post-actions .hc-save-btn:hover,
+.hc-centrar-contenido .hc-post-actions .hc-more-options-button:hover {
+    background-color: rgb(255, 255, 255); /* Color de fondo más oscuro al pasar el ratón */
+    color: #000000; /* Para mejorar el contraste al pasar el ratón */
+}
+
+
+
+.hc-centrar-contenido .hc-post-actions {
+    display: flex;
+    align-items: center; /* Para centrar los elementos verticalmente */
+    justify-content: space-between; /* Separa los elementos al principio y al final */
+    margin: 25px;
+    /* Otros estilos... */
+}
+
+.hc-centrar-contenido .hc-post-actions .hc-donate-button {
+    display: inline-block;
+    margin: 0;
+    color: white;
+    border-radius: 0;
+    background-color: rgb(97, 171, 128);;
+    padding: 15px;
+    width: 150px;
+    /* Otros estilos... */
+}
+
+
+/* Para limpiar el float */
+.hc-centrar-contenido .hc-post:after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+.hc-centrar-contenido .hc-post-actions .hc-donate-button:hover {
+    background-color: darkblue; /* Color de fondo más oscuro al pasar el ratón */
+}
+
+
+.hc-media-file {
+    max-height: 200px;
+    width: auto; /* Esto mantiene la relación de aspecto */
+}
+
+
+.hc-content-box .hc-media-thumbnail,
+.hc-content-box video {
+    display: block;
+    margin: 0 auto; /* Centra el elemento horizontalmente */
+    max-height: 200px; /* Mantiene la altura máxima como estaba */
+}
+
+
+.hc-post {
+    background-color: rgb(39, 39, 39); /* Este es un gris claro, puedes ajustar el tono según tu preferencia */
+    margin: 40px 0; /* Esto añade un espaciado de 40px arriba y abajo */
+    padding: 20px; /* Esto añade un poco de espacio dentro del contenedor gris para que el contenido no toque los bordes */
+    border-radius: 0px; /* Opcional: Esto redondea las esquinas del contenedor */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Opcional: Esto añade una sombra sutil para dar la sensación de elevación */
+    width: calc((400px * 2) + 20px);
+    box-sizing: border-box; /* Esto asegura que el padding y el border se incluyan en el cálculo del ancho */
+    margin: 0 auto; /* Centra el contenedor */
+    border: 1px solid white;
+  
+    
+}
+
+.hc-post-actions #shareButton:hover,
+.hc-post-actions .hc-comment-btn:hover,
+.hc-post-actions .hc-donate-btn:hover {
+    background-color: white; /* Fondo blanco en hover */
+    color: black; /* Texto negro en hover */
+    /* ...otros estilos de hover si es necesario... */
+}
+
+.hc-post-actions #shareButton,
+.hc-post-actions .hc-comment-btn {
+    background-color: transparent;
+    border: 1px solid white;
+    color: white;
+    padding: 0 20px;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 0;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    margin: 0 5px;
+    box-sizing: border-box;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.hc-post-actions .hc-donate-btn {
+    background-color: rgb(97, 171, 128); /* Color verde */
+    border: 1px solid white;
+    color: white;
+    padding: 0 20px;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 0;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    margin: 0 5px;
+    box-sizing: border-box;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+
+
+.hc-post-link {
+    width: auto;
+}
+
+.hc-post-actions {
+    display: flex;
+    align-items: center; /* Asegura que los elementos estén alineados verticalmente en el centro */
+    justify-content: space-around; /* Esto separará los elementos equitativamente a lo largo de la línea. Cambia a 'flex-start' para alinearlos a la izquierda o 'flex-end' para la derecha */
+}
+
+
+
+.centrar-contenido .hc-post-actions {
+    display: flex; /* Alinea elementos horizontalmente */
+    align-items: center; /* Centra los elementos verticalmente en el contenedor */
+    justify-content: start; /* Alinea los elementos al inicio del contenedor */
+}
+
+.centrar-contenido .hc-post-actions > * {
+    margin: 0 10px; /* Espacio horizontal entre elementos */
+    /* El resto de propiedades se heredarán de los estilos de .post-actions */
+}
+
+
+.hc-post-actions button {
+    padding: 10px 20px; /* Espacio interior para botones y enlaces */
+    background-color: rgb(234, 216, 127); /* Color de fondo amarillo */
+    color: #000; /* Color del texto */
+    border: 1px solid white; /* Borde blanco */
+    cursor: pointer; /* Cursor en forma de mano al pasar sobre el elemento */
+    transition: background-color 0.2s; /* Transición suave del color de fondo */
+}
+
+
+results-container a {
+    display: contents;
+    padding: 10px 20px; /* Espacio interior para botones y enlaces */
+    background-color: rgb(234, 216, 127); /* Color de fondo amarillo */
+    color: #000; /* Color del texto */
+    border: 1px solid white; /* Borde blanco */
+    cursor: pointer; /* Cursor en forma de mano al pasar sobre el elemento */
+    transition: background-color 0.2s; /* Transición suave del color de fondo */
+}
+
+.centrar-contenido .hc-post-actions a:hover,
+.centrar-contenido .hc-post-actions button:hover {
+    background-color: rgb(234, 127, 127); /* Color de fondo al pasar el mouse */
+}
+
+
+
+
+/* Y luego aplicas los estilos adicionales que ya has definido */
+
+
+</style>
+
+
+
+
+
+{% endblock %}

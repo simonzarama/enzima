@@ -91,7 +91,7 @@
 {% endfor %}
 
 <!-- Modal para editar comentarios -->
-<div id="edit-comment-modal" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+<div id="edit-comment-modal" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgb(39, 39, 39);  padding: 20px; border: 1px solid white;">
     <textarea id="edit-comment-textarea" rows="4" cols="50"></textarea>
     <div id="edit-button-container" style="display: flex; justify-content: space-around; margin-top: 10px;">
         <button id="cancel-edit-button" class="cancel-button">Cancel</button>
@@ -100,7 +100,7 @@
 </div>
 
 <!-- Modal para confirmar la eliminación de comentarios -->
-<div id="delete-comment-modal" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+<div id="delete-comment-modal" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgb(39, 39, 39);  padding: 20px; border: 1px solid black;">
     <p>Are you sure you want to delete this comment?</p>
     <div id="delete-button-container" style="display: flex; justify-content: space-around; margin-top: 10px;">
         <button id="cancel-delete-button" class="cancel-button">Cancel</button>
@@ -116,27 +116,28 @@
 
 
 
-<div id="delete-confirmation" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+<div id="delete-confirmation" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgb(39, 39, 39);  padding: 20px; border: 1px solid white;">
     <p>Are you sure you want to delete this?</p>
     <div id="button-container" style="display: flex; justify-content: space-around;">
         <button id="cancel-button" class="cancel-button">Cancel</button>
         <button id="confirm-post-delete-button" class="btn delete-button" data-community-name="{{ post.community.name }}">Delete</button>
     </div>
 </div>
-<div id="edit-post-container" class="edit-post-container" style="display:none; border: 1px solid black;">
+<div id="edit-post-container" class="edit-post-container" style="display:none; border: 1px solid white;">
     <form id="edit-post-form" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="form-group">
             <label for="edit-title">Title:</label>
-            <input type="text" id="edit-title" name="title" required="" style="border: 1px solid black;">
+            <input type="text" id="edit-title" name="title" required="" style="border: 1px solid white;">
         </div>
         <div class="form-group">
             <label for="edit-content">Text:</label>
-            <textarea id="edit-content" name="content" style="border: 1px solid black; width: 800px; min-height: 300px;">{{ post.content }}</textarea>
+            <textarea id="edit-content" name="content" style="border: 1px solid white; width: 800px; min-height: 300px;">{{ post.content }}</textarea>
         </div>
         <div class="form-group">
             <label for="edit-file-input">Attach file:</label>
             <input type="file" id="edit-file-input" name="media_file" multiple accept="image/*,video/*">
+            <br>
             <div id="current-file"></div> 
             <input type="checkbox" id="remove-media-file" name="remove_media_file" value="true">
             <label for="remove-media-file">Delete File</label>
@@ -366,6 +367,58 @@ $('#edit-post-form').submit(function(e){
 
 <style>
 
+#edit-button-container .cancel-button,
+#delete-button-container .cancel-button {
+    margin-right: 10px; /* Añade un margen a la derecha */
+    text-align: center; /* Centra el texto horizontalmente */
+    display: flex;
+    align-items: center; /* Centra el contenido verticalmente */
+    justify-content: center; /* Centra el contenido horizontalmente */
+}
+
+/* Estilos para los botones dentro de edit-button-container y delete-button-container */
+#edit-button-container .save-button,
+#delete-button-container .save-button {
+    text-align: center; /* Centra el texto horizontalmente */
+    display: flex;
+    align-items: center; /* Centra el contenido verticalmente */
+    justify-content: center; /* Centra el contenido horizontalmente */
+}
+
+edit-title {
+    border: 1px solid black;
+    padding: 5px;
+    margin-left: 10px;
+}
+
+.post-actions {
+    display: flex;
+    justify-content: space-around; /* Distribuye los elementos uniformemente */
+    align-items: center; /* Alinea los elementos verticalmente */
+    gap: 10px; /* Espacio entre elementos */
+    padding: 0 20px; /* Espaciado en los bordes */
+    /* ...resto de tus estilos... */
+}
+
+textarea {
+    overflow: auto;
+    resize: vertical;
+    padding: 20px;
+}
+
+
+.post-actions .like-button, 
+.post-actions .save-btn{
+    padding: 10px 10px; /* 10px de padding vertical y 10px de padding horizontal */
+    background-color: rgb(234, 216, 127);
+    color: #000000;
+    border: 1px solid white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-align: center; 
+}
+
+
 .post-link, .post-link:hover {
     text-decoration: none;
     color: inherit;
@@ -384,7 +437,7 @@ $('#edit-post-form').submit(function(e){
 
 
 .delete-button {
-    background-color: rgb(234, 127, 127);
+    background-color: rgb(234, 216, 127);
 }
 
 .edit-button:hover {
@@ -404,22 +457,25 @@ $('#edit-post-form').submit(function(e){
 }
 
 .save-button {
-    color: white;
+    color: rgb(39, 39, 39);
     padding: 10px 20px;
-    background-color: rgb(234, 127, 127);
+    background-color: rgb(234, 216, 127);
+    margin-right: 50px;
     text-decoration: none;
     border: none;
-    border-radius: 25px;
+    border-radius: 0;
     border: 1px solid #ffffff;
     margin-bottom: 2px;
     font-size: 16px;
     cursor: pointer;
     transition: background-color 0.2s, color 0.2s;
-    width: 150px;
+    
     height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
+    width: auto; /* Ajusta el ancho según sea necesario o usa 'auto' */
+    white-space: nowrap;
 }
 
 .save-button:hover {
@@ -430,11 +486,11 @@ $('#edit-post-form').submit(function(e){
 
 .cancel-button {
     color: white;
-    background-color: #000000;
+    background-color: rgb(39, 39, 39);
     padding: 10px 20px;
     text-decoration: none;
     border: none;
-    border-radius: 25px;
+    border-radius: 0;
     border: 1px solid #ffffff;
     margin-bottom: 2px;
     font-size: 16px;
@@ -463,7 +519,7 @@ $('#edit-post-form').submit(function(e){
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: white;
+    background: rgb(39, 39, 39);
     padding: 20px;
     border: 1px solid #ccc;
     z-index: 1000;  /* para asegurarse de que aparezca en la parte superior*/
@@ -472,11 +528,11 @@ $('#edit-post-form').submit(function(e){
 
     .btn {
         /* Suponiendo un fondo oscuro, pero puedes cambiarlo según tu diseño */
-        color: white;
-        padding: 5px 10px;
+        color: rgb(0, 0, 0);
+        padding: 5px 20px;
         text-decoration: none;
         border: none;
-        border-radius: 25px;
+        border-radius: 0;
         border: 1px solid #ffffff;
         margin-bottom: 2px;
     }
@@ -505,7 +561,10 @@ $('#edit-post-form').submit(function(e){
         text-decoration: none;
     }
     
-    
+    .centrar-contenido form {
+    background-color: rgb(39, 39, 39);
+    }
+
     .text-button {
         background: none;
         border: none;
@@ -546,6 +605,7 @@ $('#edit-post-form').submit(function(e){
     
     /* Estilo general */
     .centrar-contenido {
+        
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -557,9 +617,11 @@ $('#edit-post-form').submit(function(e){
     /* Estilo para el post y la sección de comentarios */
     .centrar-contenido .post,
     .centrar-contenido .comment-section {
-        background-color: #808080;
-        padding: 20px;
+        background-color: rgb(39, 39, 39);
+        color: white;
         border: 1px solid white;
+        padding: 20px;
+        
         border-radius: 5px;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         width: calc((400px * 2) + 20px);
@@ -587,7 +649,7 @@ $('#edit-post-form').submit(function(e){
     .post-actions .delete-button,
     .centrar-contenido .comment-section button {
         display: inline-block;
-        margin: 0 10px;
+        margin: 0 0px;
         padding: 10px 20px;
         background-color: rgb(234, 216, 127);
         color: #000000;
@@ -621,20 +683,19 @@ $('#edit-post-form').submit(function(e){
     }
     
     .post-actions .options-container {
-        position: absolute;
-        width: 144px;
-        top: 100%;
-        left: 50;
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        background-color: #808080;
-        border: 1px solid #ccc;
-        padding: 10px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        transform: translateX(10px);
-    }
-    
+    position: absolute;
+    width: 137px;
+    top: 100%;
+    left: -10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    background-color: rgb(39, 39, 39);
+    border: 1px solid #ccc;
+    padding: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transform: translateX(10px);
+}
     .centrar-contenido .comment-section form {
         max-width: none; /* Elimina el ancho máximo */
         width: calc((400px * 2) - 20); /* Establece el ancho deseados */
@@ -663,8 +724,29 @@ $('#edit-post-form').submit(function(e){
         box-sizing: border-box;
     }
     
-    
-    
+    #delete-confirmation, #edit-post-container {
+    background-color: rgb(39, 39, 39);
+    color: white;
+    padding: 32px;
+    border: 1px solid white;
+
+}
+
+
+#edit-comment-modal, #delete-comment-modal {
+    background-color: rgb(39, 39, 39);
+    color: white;
+    border: 1px solid white;
+}
+
+
+label {
+    display: inline-block;
+    margin-bottom: 23px;
+}
+
+
+
     </style>
     
     

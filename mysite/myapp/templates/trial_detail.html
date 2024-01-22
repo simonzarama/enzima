@@ -1,0 +1,789 @@
+
+
+{% extends 'base_user.html' %}
+{% load custom_filters %}
+{% load static %}
+
+
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+
+
+{% block content %}
+<style>
+
+.modal {
+    width: 800px;
+    position: fixed; /* Cambiado de 'absolute' a 'fixed' */
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%); /* Ancho fijo del modal */
+    /* ...otros estilos existentes... */
+}
+
+/* Estilo para el título */
+#applyModal h2 {
+    text-align: center;
+    margin-top: 0;
+}
+
+/* Alinear texto y checkboxes */
+.flex-container {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    
+    margin-bottom: 10px;
+}
+
+/* Estilo para los párrafos */
+#applyModal p {
+    margin: 0;
+    margin-right: 10px;
+}
+
+/* Estilo para el texto de Participación */
+#applyModal h4 {
+    font-size: 1rem; /* Igual que el tamaño de los párrafos */
+    margin-top: 20px;
+}
+
+/* Estilo para el área de mensaje */
+#applyModal label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+#applyModal textarea {
+    width: calc(100% - 20px);
+    
+    max-width: 100%;
+    margin: 0 auto;
+    display: block;
+}
+
+/* Estilo para los botones */
+.modal-buttons {
+    text-align: center;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.cancel-button {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 20px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1; /* Asegúrate de que esté detrás del modal */
+    display: none;
+}
+
+
+#donateButton {
+    background-color: rgb(97, 171, 128); /* Color verde */
+    border: 1px solid white;
+    color: white;
+    padding: 0 20px;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 0;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    margin: 0 5px;
+    box-sizing: border-box;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+#donateButton:hover {
+
+background-color: white; /* Fondo blanco en hover */
+    color: black; /* Texto negro en hover */
+}
+/* Estilos existentes... */
+/* Estilos existentes... */
+
+/* Estilos para botones Apply, Save, Share y el enlace Edit */
+.trial-actions #applyButton,
+.trial-actions .save-trial,
+.trial-actions #shareButton,
+.trial-actions a.btn.btn-primary {
+    background-color: transparent;
+    border: 1px solid white;
+    color: white;
+    padding: 0 20px;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 0;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    margin: 0 5px;
+    box-sizing: border-box;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+/* Estilos de hover para Apply, Save, Share y el enlace Edit */
+.trial-actions #applyButton:hover,
+.trial-actions .save-trial:hover,
+.trial-actions #shareButton:hover,
+.trial-actions a.btn.btn-primary:hover {
+    background-color: white; /* Fondo blanco en hover */
+    color: black; /* Texto negro en hover */
+}
+
+/* Resto de tus estilos... */
+
+
+
+
+.crowdfunding-section {
+    margin: 20px 0;
+    text-align: center;
+}
+
+.progress-bar-container {
+    width: 100%;
+    background-color: #ddd;
+    border-radius: 4px;
+}
+
+.progress-bar {
+    height: 20px;
+    background-color: rgb(97, 171, 128);
+    border-radius: 4px;
+}
+
+    /* Estilos Generales */
+    body {
+        color: white; /* Texto blanco */
+        background-color: #333; /* Fondo oscuro */
+        font-family: Arial, sans-serif; /* Fuente predeterminada */
+    }
+    
+    a, a:visited {
+        color: white; /* Enlaces en blanco */
+        text-decoration: none; /* Sin subrayado */
+        margin-right: 5px;
+    }
+    
+    a:hover {
+        text-decoration: underline; /* Subrayado al pasar el ratón */
+    }
+    
+    /* Contenedor Principal */
+    .centrar-contenido {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        
+        margin: 20px auto;
+    }
+    
+    .content-container, #applyModal {
+    background-color: rgb(39, 39, 39); /* Fondo oscuro */
+    color: white; /* Gris */
+        border-radius: 10px;
+        border: 1px solid white; 
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 800px;
+    }
+    
+    .centrar-contenido form {
+    background-color: rgb(39, 39, 39);
+    }
+
+    /* Detalles del Trial */
+    .trial-content {
+        border: 1px solid white;
+        background-color: transparent;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .media-container img, .media-container video {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+    }
+    
+    /* Estilos para la Barra de Progreso de Crowdfunding */
+    .donation-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 20px 0;
+    }
+    
+    .progress-bar-container {
+        width: 100%;
+        background-color: lightgray;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress {
+        height: 20px;
+        width: 50%; /* Ajustar según el progreso real */
+        background-color: green;
+    }
+    
+    .donation-info {
+        margin-top: 10px;
+        text-align: center;
+    }
+    
+    /* Botones de Acción */
+    .trial-actions {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .trial-actions button {
+        padding: 10px 15px;
+        border: none;
+        border-radius: 4px;
+        background-color: rgb(97, 171, 128);
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    
+    .trial-actions button:hover {
+        background-color: rgb(85, 150, 110);
+    }
+    
+    /* Sección de Comentarios */
+    .comment-section {
+    margin-top: 30px;
+    border: 1px solid white; 
+    background-color: rgb(39, 39, 39); /* Fondo oscuro */
+    color: white; /* Texto blanco */
+    padding: 15px;
+    border-radius: 5px;
+}
+    
+    .comment-section h4 {
+        margin-bottom: 15px;
+    }
+    
+    /* Comentarios y Formulario */
+    .comment {
+    padding: 10px;
+    background-color:
+    rgb(39, 39, 39); /* Fondo oscuro /
+    color: white; / Texto blanco */
+    margin-bottom: 10px;
+    border-radius: 4px;
+    }
+    
+    form.comment-form {
+    background-color: rgb(39, 39, 39); /* Fondo oscuro */
+    color: white; /* Texto blanco */
+    margin-top: 15px;
+    padding: 15px; /* Agrega padding si es necesario */
+    border-radius: 4px;
+}
+
+#comment-form #comment_text {
+    width: 100%; /* Ajuste para tener en cuenta el nuevo padding */
+    background-color: rgb(39, 39, 39); /* Fondo oscuro */
+    color: white; /* Texto blanco */
+    border: 1px solid #ccc; /* Borde, ajusta según tus preferencias */
+    padding: 10px; /* Añadir padding para mayor
+comodidad al escribir */
+margin-bottom: 10px;
+}
+
+form.comment-form button {
+    background-color: rgb(97, 171, 128);
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+
+.comment {
+    border-top: 1px solid white;
+    padding-top: 10px;
+    margin-top: 10px;
+    padding-right: 20px;
+    border-radius: 0;
+    box-sizing: border-box;
+}
+
+
+.form-group textarea {
+    margin: 0;      /* Asegúrate de que no haya margen adicional */
+    padding: 0;     /* Ajusta el padding según sea necesario */
+}
+
+.form-group textarea {
+    width: 100%;    /* Hace que el textarea ocupe todo el ancho disponible */
+}
+
+
+/* Estilos para el modal de editar comentario */
+#edit-comment-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgb(39, 39, 39);
+    padding: 20px;
+    border: 1px solid white;
+    display: none; /* Mantenerlo oculto inicialmente */
+    width: 465px; /* Ancho fijo */
+    height: 250px; /* Alto fijo */
+    box-sizing: border-box; /* Asegura que el padding y el borde se incluyan en el ancho y alto */
+    overflow: auto; /* Permite el desplazamiento si el contenido excede el tamaño */
+}
+
+/* Estilos para el modal de eliminar comentario */
+#delete-comment-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgb(39, 39, 39);
+    padding: 20px;
+    border: 1px solid white;
+    display: none; /* Mantenerlo oculto inicialmente */
+    width: 400px; /* Ancho fijo */
+    height: 150px; /* Alto fijo */
+    box-sizing: border-box; /* Asegura que el padding y el borde se incluyan en el ancho y alto */
+    overflow: auto;
+}
+
+/* Estilos comunes para los botones dentro de los contenedores de botones */
+#edit-button-container button, #delete-button-container button {
+    margin: 0 10px;
+    padding: 10px 20px;
+    background-color: rgb(234, 216, 127);
+    color: #000000;
+    border: 1px solid white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Estilos específicos para el botón de cancelar (aplicados a ambos modales) */
+#edit-button-container .cancel-button, #delete-button-container .cancel-button {
+    margin-right: 10px;
+}
+
+    </style>
+    
+    <div class="centrar-contenido">
+        <div class="content-container">
+            <article class="trial">
+                <!-- Solo Comunidades -->
+                <span>Communities: 
+                    {% for community in trial.communities.all %}
+                        <a href="{% url 'view_community' community.name %}" class="link-blanco">{{ community.name }}</a>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </span>
+    
+                <!-- Título, Administradores, Supervisor Médico, Descripción, Media -->
+                <div class="trial-content">
+                    <h3 id="trial-title" style="text-align: center; text-transform: uppercase;">{{ trial.title }}</h3>
+                    <br>
+                    
+                    <!-- Administradores -->
+                    <span>Administrators: 
+                        {% for admin in trial.administrators.all %}
+                            <a href="{% url 'profile' admin.username %}" class="link-blanco">{{ admin.username }}</a>{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </span>
+                    <br>
+                    <br>
+    
+                    <!-- Supervisor Médico -->
+                    {% if trial.medical_supervisor %}
+                        <span>Medical Supervisor: 
+                            <a href="{% url 'profile' trial.medical_supervisor.username %}" class="link-blanco">{{ trial.medical_supervisor.username }}</a>
+                        </span>
+                    {% endif %}
+                    <br>
+                    <br>
+    
+                    <div class="media-container">
+                        {% if trial.media_file %}
+                            <!-- Asumiendo que es una imagen -->
+                            <img src="{{ trial.media_file.url }}" alt="{{ trial.title }}">
+                        {% endif %}
+                    </div>
+                    <p id="trial-description">{{ trial.description|linebreaks }}</p>
+                    <br>
+                    <br>
+    
+                    <span>Participation Criteria: </span>
+                    {% if trial.participation_criteria %}
+                        <p>{{ trial.participation_criteria }}</p>
+                    {% else %}
+                        <p>None</p>
+                    {% endif %}
+                </div>
+
+
+            <!-- Sección de Crowdfunding -->
+            {% if trial.include_crowdfunding %}
+                <div class="crowdfunding-section">
+                    <p>Goal: ${{ trial.goal }}</p>
+                    <p>Raised: ${{ trial.total_raised }}</p>
+                    <p>Donors: {{ trial.total_donors }}</p>
+
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" 
+                            data-raised="{{ trial.total_raised }}" 
+                            data-goal="{{ trial.goal }}"></div>
+                    </div>
+                </div>
+            {% endif %}
+            <br>
+
+            <!-- Botones de Acción -->
+            <div class="trial-actions">
+                <button id="applyButton" class="btn btn-primary">Apply</button>
+                <button class="btn btn-primary save-trial" data-trial-id="{{ trial.id }}">Save</button>
+                <button id="shareButton" data-id="{{ trial.id }}">Share</button>
+                {% if is_administrator %}
+                <a href="{% url 'edit_trial' trial.id %}" class="btn btn-primary">Edit</a>
+                {% endif %}
+                <a href="{% url 'donate_view' trial.id %}" id="donateButton" class="btn btn-primary">Donate</a>
+
+            </div>
+
+            <div class="comment-section">
+                {% if trial and trial.id %}
+                <!-- Inicio del formulario para agregar un comentario -->
+                <form method="post" action="{% url 'add_trial_comment' trial.id %}" id="comment-form">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="comment_text">Add Comment:</label><br>
+                        <textarea id="comment_text" name="comment_text" rows="4" cols="50"></textarea>
+                        <button type="submit">Post Comment</button> <!-- Botón para enviar el formulario -->
+                    </div>
+                </form>
+                <!-- Fin del formulario -->
+                {% endif %}
+
+
+
+            
+                <br>
+                <h4>Comments:</h4>
+                {% for comment in trial.comments.all %}
+                <div class="comment" id="comment-{{ comment.id }}">
+                    <p>
+                        <img src="{{ comment.user.userprofile.profile_picture.url }}" alt="{{ comment.user.username }}" width="50" class="profile-image">
+                        {% if comment.user and comment.user.username %}
+                            <a href="{% url 'profile' comment.user.username %}" class="link-blanco">{{ comment.user.username }}</a>:
+                        {% else %}
+                            {{ comment.user.username }}:
+                        {% endif %}
+                    </p>
+                    
+                    <p>{{ comment.text }}</p>
+                    {% if request.user == comment.user %}
+                        <div class="edit-buttons-container">
+                            <a href="#" class="edit-comment-button text-button" data-comment-id="{{ comment.id }}">
+                                <i class="fa fa-edit"></i> Edit
+                            </a>
+                            <a href="#" class="delete-comment-button text-button" data-comment-id="{{ comment.id }}">
+                                <i class="fa fa-trash"></i> Delete
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>     
+                {% endfor %}
+
+                <div id="edit-comment-modal" class="modal" style="display:none;">
+                    <textarea id="edit-comment-textarea" rows="4" cols="50"></textarea>
+                    <div id="edit-button-container" style="display: flex; justify-content: space-around; margin-top: 10px;">
+                        <button id="cancel-edit-button" class="cancel-button">Cancel</button>
+                        <button id="save-edit-comment-button" class="save-button">Save</button>
+                    </div>
+                </div>
+
+                <div id="delete-comment-modal" class="modal" style="display:none;">
+                    <p>Are you sure you want to delete this comment?</p>
+                    <div id="delete-button-container" style="display: flex; justify-content: space-around; margin-top: 10px;">
+                        <button id="cancel-delete-button" class="cancel-button">Cancel</button>
+                        <button id="confirm-delete-button" class="save-button">Delete</button>
+                    </div>
+                </div>
+
+
+
+
+            </div>
+
+            <div id="applyModal" class="modal" style="display:none;">
+                <br>
+                
+                <form method="post" action="{% url 'view_trial_detail' trial.id %}">
+                    <h2>Trial Application</h2>
+                    <br>
+                    {% csrf_token %}
+                    {% if not already_applied %}
+                        <div class="flex-container">
+                            <p>Are you interested in applying for this trial?</p> {{ form.wants_to_apply }}
+                            <div id="participationCriteriaSection" style="display: none;">
+                                <h4>Participation Criteria</h4>
+                                <p>{{ trial.participation_criteria }}</p>
+                                <div class="flex-container">
+                                    <p>Do you meet the requirements for this trial?</p>
+                                    {{ form.meets_requirements }}
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p>You have already applied for this trial.</p>
+                    {% endif %}
+                    <div>
+                        <label for="id_message">Message:</label>
+                        {{ form.message }}
+                    </div>
+                    <div class="modal-buttons">
+                        <button type="submit">Send</button>
+                        <button type="button" class="cancel-button" id="cancelButton">Cancel</button>
+                    </div>
+                </form>
+            </div>
+            
+            
+
+        </article>
+    </div>
+</div>
+
+
+<!-- BOTON GUARDAR -->
+<script>
+    $('.save-trial').on('click', function() {
+    var trialId = $(this).data('trial-id');
+    $.ajax({
+        url: '/trial/' + trialId + '/save/',
+        method: 'POST',
+        data: {
+            // Aquí puedes agregar datos adicionales si son necesarios
+            'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+        },
+        success: function(response) {
+            if (response.saved) {
+                // Código para manejar el estado "guardado"
+                console.log("Contenido guardado");
+            } else {
+                // Código para manejar el estado "no guardado"
+                console.log("Contenido no guardado o eliminado de guardados");
+            }
+        },
+        error: function(xhr, status, error) {
+            // Manejar errores
+            console.log("Error al guardar el contenido:", error);
+        }
+    });
+});
+    </script>
+
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var progressBar = document.querySelector('.progress-bar');
+        var raised = parseFloat(progressBar.getAttribute('data-raised'));
+        var goal = parseFloat(progressBar.getAttribute('data-goal'));
+        var progressPercentage = (raised / goal) * 100;
+
+        progressBar.style.width = progressPercentage + '%';
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var modal = document.getElementById('applyModal');
+        var btn = document.getElementById('applyButton');
+        var alreadyApplied = btn.getAttribute('data-already-applied') === 'true';
+        var wantsToApplyCheckbox = document.getElementById('id_wants_to_apply');
+        var participationCriteriaSection = document.getElementById('participationCriteriaSection');
+        var cancelButton = document.getElementById('cancelButton');
+    
+        btn.onclick = function() {
+            modal.style.display = 'block';
+            if (!alreadyApplied) {
+                // Manejar el comportamiento del checkbox si el usuario aún no ha aplicado
+                wantsToApplyCheckbox.addEventListener('change', function() {
+                    if (wantsToApplyCheckbox.checked) {
+                        participationCriteriaSection.style.display = 'block';
+                    } else {
+                        participationCriteriaSection.style.display = 'none';
+                    }
+                });
+    
+                // Establecer el estado inicial del contenido en función del estado del checkbox
+                participationCriteriaSection.style.display = wantsToApplyCheckbox.checked ? 'block' : 'none';
+            }
+        };
+    
+        cancelButton.onclick = function() {
+            modal.style.display = 'none';
+        };
+    
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        };
+    
+        document.getElementById('shareButton').addEventListener('click', function() {
+            var trialId = this.getAttribute('data-id');
+            var urlToCopy = window.location.origin + '/trials/' + trialId + '/';
+            
+            var tempInput = document.createElement('input');
+            tempInput.value = urlToCopy;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+    
+            alert('Link copied to clipboard!');
+        });
+    
+        var progressBar = document.querySelector('.progress-bar');
+        if (progressBar) {
+            var raised = parseFloat(progressBar.getAttribute('data-raised'));
+            var goal = parseFloat(progressBar.getAttribute('data-goal'));
+            var progressPercentage = (raised / goal) * 100;
+    
+            progressBar.style.width = progressPercentage + '%';
+        }
+    });
+    </script>
+    
+    <script>
+
+
+document.getElementById('shareButton').addEventListener('click', function() {
+        var trialId = this.getAttribute('data-id');
+        var urlToCopy = window.location.origin + '/trials/' + trialId + '/';
+        
+        // Crear un input temporal para copiar el texto
+        var tempInput = document.createElement('input');
+        tempInput.value = urlToCopy;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+
+        // Mostrar un mensaje de confirmación
+        alert('Link copied to clipboard!'); // Puedes reemplazar esto con una implementación más elegante
+    });
+
+
+
+
+    $(document).ready(function() {
+        $('.edit-comment-button').click(function(){
+            var commentId = $(this).data('comment-id');
+            var currentText = $('#comment-' + commentId + ' p:nth-child(2)').text(); // Obtener el texto actual del comentario
+            console.log("Texto actual del comentario: ", currentText); 
+            $('#edit-comment-textarea').val(currentText); // Cargar el texto en el área de texto del modal
+            $('#edit-comment-modal').data('comment-id', commentId).show();
+        });
+
+    $('#cancel-edit-button').click(function(){
+        $('#edit-comment-modal').hide();
+    });
+
+    $('#save-edit-comment-button').click(function(){
+        var commentId = $('#edit-comment-modal').data('comment-id');
+        var commentText = $('#edit-comment-textarea').val();
+
+        $.ajax({
+            url: "{% url 'edit_trial_comment' 9999 %}".replace(9999, commentId),
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            data: {
+                'comment_text': commentText,
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Actualiza el texto del comentario en la página
+                    $('#comment-' + commentId + ' .comment-text').text(commentText);
+                    $('#edit-comment-modal').hide();
+                    location.reload(); 
+
+                } else {
+                    // Manejar el error
+                }
+            }
+        });
+    });
+
+    $('.delete-comment-button').click(function(){
+        var commentId = $(this).data('comment-id');
+        $('#delete-comment-modal').data('comment-id', commentId).show();
+    });
+
+    $('#cancel-delete-button').click(function(){
+        $('#delete-comment-modal').hide();
+    });
+
+    $('#confirm-delete-button').click(function(){
+        var commentId = $('#delete-comment-modal').data('comment-id');
+
+        $.ajax({
+            url: "{% url 'delete_trial_comment' 9999 %}".replace(9999, commentId),
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Elimina el comentario de la página
+                    $('#comment-' + commentId).remove();
+                    $('#delete-comment-modal').hide();
+
+                    // Actualiza el conteo de comentarios
+                    var commentCount = parseInt($('#comment-count').text());
+                    $('#comment-count').text(commentCount - 1);
+                } else {
+                    // Manejar el error
+                }
+            }
+        });
+    });
+});
+
+</script>
+
+
+{% endblock %}

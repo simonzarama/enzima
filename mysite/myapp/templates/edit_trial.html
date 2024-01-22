@@ -1,0 +1,64 @@
+
+
+{% extends 'base_user.html' %}
+{% load custom_filters %}
+{% load static %}
+
+
+<link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+
+{% block content %}
+<br>
+<div class="trial-edit-container">
+    <h1>Edit Trial</h1>
+    <br>
+    <br>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-content">
+            {{ form.as_p }}
+        </div>
+        {{ form.media }}
+        <br>
+        <button type="submit">Submit</button>
+    </form>
+</div>
+<br>
+
+<style>
+    .trial-edit-container {
+        background-color: rgb(39, 39, 39);
+        color: white;
+        border: 1px solid white;
+        width: 800px;
+        margin: auto;
+        padding: 20px;
+        border-radius: 5px;
+        text-align: center; /* Centrar el título y el botón */
+    }
+
+    .trial-edit-container h1 {
+        margin-bottom: 20px; /* Espacio debajo del título */
+    }
+
+    .form-content {
+        text-align: left; /* Alinear el contenido del formulario a la izquierda */
+    }
+
+    .trial-edit-container textarea {
+        width: 760px;  /* Ancho específico para los textareas */
+        height: 150px; /* Altura ajustable según tus necesidades */
+        color: black; /* Color del texto dentro del textarea */
+        background-color: white; /* Fondo blanco para mayor legibilidad */
+        border: 1px solid #ccc; /* Borde sutil para el textarea */
+        border-radius: 4px; /* Bordes redondeados */
+        padding: 10px; /* Espaciado interior */
+        margin-top: 10px; /* Espacio encima del textarea */
+    }
+
+    /* Estilos adicionales según sea necesario */
+</style>
+{% endblock content %}

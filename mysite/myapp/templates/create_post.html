@@ -13,30 +13,29 @@
         {% csrf_token %}
         
         <div class="form-group">
-            <label for="{{ form.title.id_for_label }}">Título:</label>
+            <label for="{{ form.title.id_for_label }}">Title:</label>
             <div class="title-container">
                 {{ form.title }}
-                <div class="post-options">
-                    <!-- Cambia name="file-input" a name="media_file" -->
-                    <input type="file" id="file-input" name="media_file" multiple accept="image/*,video/*" style="display:none;"/>
-                    <button type="button" class="icon-button" onclick="document.getElementById('file-input').click();">
-                        <i class="far fa-image"></i>
-                    </button>
-                    <button type="button" class="icon-button">
-                        <i class="fas fa-link"></i>
-                    </button>
-                </div>
+            </div>
+            <div class="post-options">
+                <br>
+                <div class="media-title">Media</div>
+                <input type="file" id="file-input" name="media_file" multiple accept="image/*,video/*" style="display:none;"/>
+                <button type="button" class="icon-button" onclick="document.getElementById('file-input').click();">
+                    <i class="far fa-image"></i>
+                </button>
             </div>
         </div>
+        
 
         <div class="file-preview" id="file-preview"></div>
 
         <div class="form-group">
-            <label for="{{ form.content.id_for_label }}">Texto:</label>
+            <label for="{{ form.content.id_for_label }}">Text:</label>
             {{ form.content }}
         </div>
 
-        <button type="submit">Publicar</button>
+        <button type="submit">Post</button>
     </form>
 </div>
 
@@ -59,13 +58,14 @@
 
 /* Estilos del formulario */
 .centrar-post form {
-    background-color: #808080; 
-    padding: 20px;
+    background-color: rgb(39, 39, 39); 
+    padding: 40px;
+    color: white;
     border: 1px solid white; 
     border-radius: 5px; 
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); 
-    width: 100%;
-    max-width: 400px; 
+    width: 800px;
+    max-width: 800px; 
     box-sizing: border-box;
 }
 
@@ -91,6 +91,17 @@
 .centrar-post form label {
     display: block;
     margin-bottom: 5px;
+}
+
+textarea {
+    width: 100%;
+    overflow: auto;
+    resize: vertical;
+}
+
+button-title, input {
+    width: 50%;
+    overflow: visible;
 }
 
 .sub-button {
@@ -140,6 +151,7 @@
 }
 
 .post-options {
+    align-items: center;
     position: absolute;
     top: 50%;
     right: 0;
@@ -147,6 +159,12 @@
     margin-left: 10px;
 }
 
+
+.media-title {
+    /* Ajusta estos estilos según necesites */
+    margin-right: 10px; 
+    margin-left : 10px;
+}
 .file-preview {
     display: flex;
     flex-wrap: wrap;

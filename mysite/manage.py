@@ -20,3 +20,11 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+from dotenv import load_dotenv
+
+if __name__ == '__main__':
+    load_dotenv()  # Asegúrate de que esta línea está antes de ejecutar Django
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myproject.settings')
+    # ... Resto del código ...

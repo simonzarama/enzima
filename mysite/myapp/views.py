@@ -33,6 +33,8 @@ from django.contrib.contenttypes.models import ContentType
 from .models import ResourceLike
 from .models import CampaignComment
 from django.db.models import Count
+from dal import autocomplete
+from .models import Notification
 
 
 
@@ -143,12 +145,7 @@ def get_campaigns(request):
 def cart(request):
     return render(request, 'cart.html')
 
-def notifications(request):
-    return render(request, 'notifications.html')
 
-
-def messages(request):
-    return render(request, 'messages.html')
 
 
 
@@ -176,15 +173,21 @@ def create_community_view(request):
     if request.method == 'POST':
         form = CreateCommunityForm(request.POST)
         if form.is_valid():
-            community = form.save()
+            community = form.save(commit=False)  # Guarda la comunidad sin enviarla a la base de datos todavía
+
+            # Crear y guardar un ChatGroup asociado
+            chat_group_name = f"{community.name} Group Chat"
+            chat_group = ChatGroup.objects.create(name=chat_group_name)
+            community.chat_group = chat_group
+
+            community.save()  # Ahora guarda la comunidad con su grupo de chat
+
             return redirect('view_community', community_name=community.name)
     else:
         form = CreateCommunityForm()
 
     context = {'form': form}
     return render(request, 'create_community.html', context)
-
-
 
 
 
@@ -318,9 +321,12 @@ def like_resource(request, resource_id):
 @login_required
 def save_content(request, content_type_model, content_id):
     # Mapear el slug al nombre real del modelo
-    model_name = MODEL_MAP.get(content_type_model)
+    model_name = MODEL_MAP.get(content_type_model, None)
     if not model_name:
-        return JsonResponse({"error": "Modelo no válido"}, status=400)
+        if content_type_model == 'trial':
+            model_name = 'Trial'
+        else:
+            return JsonResponse({"error": "Modelo no válido"}, status=400)
 
     # Obtener el modelo del contenido
     model = apps.get_model(app_label='myapp', model_name=model_name)
@@ -342,6 +348,11 @@ def save_content(request, content_type_model, content_id):
         # Si no está guardado, crear un nuevo registro en SavedContent
         SavedContent.objects.create(user=request.user, content_type=content_type, object_id=content.id)
         saved = True
+        
+        if isinstance(content, Trial):
+            content.interaction_count += 1
+            content.save()
+
 
     return JsonResponse({"saved": saved})
 
@@ -363,35 +374,22 @@ def saved_content(request, username):
     # Obtener todos los recursos guardados por el usuario
     saved_resources = SavedContent.objects.filter(user=user, content_type=resource_content_type)
 
-    # Mensajes de depuración
-    print(f"Usuario actual: {username}")
-    print(f"Posts guardados: {saved_items.count()}")
-    for item in saved_items:
-        print(f"- {item.content_object}")
-    print(f"Campañas guardadas: {saved_campaigns.count()}")
-    for campaign in saved_campaigns:
-        print(f"- {campaign.content_object}")
-    print(f"Recursos guardados: {saved_resources.count()}")
-    for resource in saved_resources:
-        print(f"- {resource.content_object}")
-    for item in saved_items:
-        if item.content_object:
-            if hasattr(item.content_object, 'user') and item.content_object.user:
-                print(f"Post por: {item.content_object.user.username}")
-            else:
-                print(f"¡Error! El post con ID {item.content_object.id} no tiene un usuario asociado.")
-        else:
-            print(f"¡Error! El item con ID {item.id} tiene un content_object que es None.")
+    
+        # Obtener el tipo de contenido para Trial
+    trial_content_type = ContentType.objects.get_for_model(Trial)
 
+    # Obtener todos los ensayos guardados por el usuario
+    saved_trials = SavedContent.objects.filter(user=user, content_type=trial_content_type)
 
     # Actualizar el contexto
     context = {
-        'saved_items': saved_items,  # Estos son tus posts guardados
-        'saved_campaigns': saved_campaigns,  # Estas son las campañas guardadas
-        'saved_resources': saved_resources,  # Estos son los recursos guardados
+        'saved_items': saved_items,
+        'saved_campaigns': saved_campaigns,
+        'saved_resources': saved_resources,
+        'saved_trials': saved_trials,  # Esto son los ensayos guardados
         'profile_user': user,
-        
     }
+
 
     return render(request, 'profile-saved.html', context)
 
@@ -844,6 +842,39 @@ def all_resources(request):
     })
 
 
+# Obtener los IDs de los Trials guardados por el usuario actualAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+@login_required
+def all_trials(request):
+    # Obtener el parámetro 'order' de la URL, con un valor predeterminado
+    order = request.GET.get('order', '-published_at')
+    print("Orden recibido en la vista all_trials:", order)
+
+    # Asegúrate de que el valor de 'order' sea uno de los esperados
+    if order not in ['-published_at', '-interaction_count']:
+        order = '-published_at'
+
+    # Ordenar los trials basándose en el parámetro 'order'
+    trials = Trial.objects.order_by(order)
+
+    content_type_trial = ContentType.objects.get_for_model(Trial)
+    
+    # Obtener los IDs de los Trials guardados por el usuario actual
+    saved_trial_ids = SavedContent.objects.filter(
+        user=request.user, 
+        content_type=content_type_trial
+    ).values_list('object_id', flat=True)
+
+    # Actualizar el estado de 'guardado' para cada Trial
+    for trial in trials:
+        trial.is_saved = trial.id in saved_trial_ids
+
+    return render(request, 'trials.html', {
+        'trials': trials,
+        'saved_trial_ids': saved_trial_ids
+    })
+
+# Obtener los IDs de los Trials guardados por el usuario actualAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 @login_required
 def all_crowdfunding(request):
@@ -874,7 +905,7 @@ def all_crowdfunding(request):
     })
 
 
-
+# Obtener los IDs de los Trials guardados por el usuario actualAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 
 
@@ -884,38 +915,67 @@ def all_crowdfunding(request):
 from django.contrib.contenttypes.models import ContentType
 
 @login_required
-def community_crowdfunding(request, community_name):
+def community_trials(request, community_name):
+    # Obtener la comunidad por su nombre
     community = get_object_or_404(Community, name=community_name)
-    campaigns = CrowdfundingCampaign.objects.filter(communities=community).distinct()
 
-    # Obtener el tipo de contenido para CrowdfundingCampaign
-    content_type_campaign = ContentType.objects.get_for_model(CrowdfundingCampaign)
+    # Imprimir para depuración
+    print("Community Name:", community_name)
 
-    # Obtener los IDs de las campañas guardadas por el usuario
-    saved_campaign_ids = SavedContent.objects.filter(
+    # Filtrar los trials asociados a la comunidad
+    # Obtener el parámetro 'order' de la URL, con un valor predeterminado
+    order = request.GET.get('order', '-published_at')
+
+    # Imprimir para depuración
+    print("Order from GET request:", order)
+
+    # Asegúrate de que el valor de 'order' sea uno de los esperados
+    if order not in ['-published_at', '-interaction_count']:
+        order = '-published_at'
+
+    # Filtrar los trials asociados a la comunidad y ordenarlos
+    trials = Trial.objects.filter(communities=community).order_by(order).distinct()
+
+    # Imprimir los trials filtrados para depuración
+    print("Filtered Trials for Community:", list(trials.values('id', 'title')))
+
+    # Obtener el tipo de contenido para Trial
+    content_type_trial = ContentType.objects.get_for_model(Trial)
+
+    # Obtener los IDs de los Trials guardados por el usuario
+    saved_trial_ids = SavedContent.objects.filter(
         user=request.user, 
-        content_type=content_type_campaign
+        content_type=content_type_trial
     ).values_list('object_id', flat=True)
 
-    for campaign in campaigns:
-        campaign.is_liked = campaign.is_liked_by(request.user)
-
-    return render(request, 'community_crowdfunding.html', {
+    # Renderizar la plantilla con los datos necesarios
+    return render(request, 'community_trials.html', {
         'community': community,
-        'campaigns': campaigns,
-        'saved_campaign_ids': saved_campaign_ids  # Añade esto al contexto para usarlo en la plantilla
+        'trials': trials,
+        'saved_trial_ids': saved_trial_ids
     })
 
+from .forms import UserProfileForm
+from django.http import HttpResponseForbidden
 
 
+@login_required
+def edit_profile(request, username):
+    user = get_object_or_404(User, username=username)
 
+    # Comprueba si el usuario actual tiene permiso para editar este perfil
+    if not request.user == user and not request.user.is_superuser:
+        return HttpResponseForbidden()
 
-def edit_profile(request):
-    return render(request, 'edit_profile')
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, request.FILES, instance=user.userprofile)
+        if form.is_valid():
+            form.save()
+            return redirect('profile', username=username)
+    else:
+        form = UserProfileForm(instance=user.userprofile)
 
-
-
-
+    return render(request, 'edit_profile.html', {'form': form})
 
 
 
@@ -1165,3 +1225,621 @@ def edit_resource(request, resource_id):
 
     # Si no es POST, puedes devolver un error o simplemente renderizar la página de edición.
     return JsonResponse({"status": "error", "message": "Invalid request method."})
+
+
+
+
+
+
+
+
+
+
+#DESPUES DEL BREAK
+
+from django.shortcuts import render, redirect
+from .forms import TrialForm  # Asegúrate de crear este formulario con los campos necesarios
+from .models import Trial  # Importa el modelo Trial
+from .models import TrialComment 
+
+
+
+
+def create_trial(request):
+    if request.method == 'POST':
+        form = TrialForm(request.POST, request.FILES)
+        if form.is_valid():
+            trial = form.save(commit=False)
+
+            # Guardar primero el objeto Trial para que tenga un ID
+            trial.save()
+
+            administrators = form.cleaned_data.get('administrators')
+            
+            # Asegurarse de que el usuario actual esté incluido en los administradores
+            if request.user not in administrators.all():
+                administrators = list(administrators) + [request.user]
+            
+            # Validación de la cantidad de administradores
+            if len(administrators) > 3:
+                messages.error(request, "No se pueden asignar más de 3 administradores.")
+                return render(request, 'create_trial.html', {'form': form})
+
+            trial.administrators.set(administrators)
+
+            # Aquí puedes manejar la lógica de compromiso para crowdfunding
+            if form.cleaned_data.get('include_crowdfunding'):
+                # Implementa la lógica necesaria aquí
+                pass
+
+            form.save_m2m()  # Guarda las relaciones many-to-many
+
+            # Redirigir a una página de éxito o similar
+            return redirect('home')  # Asegúrate de tener esta URL configurada en urls.py
+
+    else:
+        form = TrialForm()
+
+    return render(request, 'create_trial.html', {'form': form})
+
+
+
+
+
+class UserAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return User.objects.none()
+
+        qs = User.objects.all()
+
+        if self.q:
+            qs = qs.filter(username__icontains=self.q)
+
+        return qs
+    
+
+class CommunityAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        # Aquí asumo que tu modelo Community tiene un campo 'name' para filtrar
+        # Modifica esta lógica según tu modelo real
+        if not self.request.user.is_authenticated:
+            return Community.objects.none()
+
+        qs = Community.objects.all()
+
+        if self.q:
+            qs = qs.filter(name__icontains=self.q)
+
+        return qs
+
+
+
+
+from .models import Trial, Application
+from .forms import ApplicationForm  # Asegúrate de haber creado este formulario
+
+@login_required
+def trial_detail(request, id):
+    trial = get_object_or_404(Trial, pk=id)
+    is_administrator = request.user in trial.administrators.all()
+    already_applied = Application.objects.filter(trial=trial, user=request.user, wants_to_apply=True).exists()
+
+    form = ApplicationForm()
+
+    if request.method == 'POST':
+        form = ApplicationForm(request.POST)
+        if form.is_valid():
+            application = form.save(commit=False)
+            application.trial = trial
+            application.user = request.user
+            if not application.wants_to_apply:
+                application.meets_requirements = False
+            application.save()
+
+            # Notificar a los administradores de cualquier nueva aplicación
+            for admin in trial.administrators.all():
+                Notification.objects.create(
+                    user=admin,
+                    message=f"New message for {trial.title} by {request.user.username}.",
+                    trial=trial 
+                )
+
+            return redirect('view_trial_detail', id=id)
+
+    # Obtener las aplicaciones relacionadas con este ensayo, ordenadas por fecha de creación
+    applications = Application.objects.filter(trial=trial).order_by('-created_at')
+
+    context = {
+        'trial': trial,
+        'is_administrator': is_administrator,
+        'form': form,
+        'already_applied': already_applied,
+        'applications': applications  # Añadir las aplicaciones al contexto
+    }
+    return render(request, 'trial_detail.html', context)
+
+
+
+class AddTrialCommentView(View):
+    def post(self, request, trial_id):
+        trial = get_object_or_404(Trial, id=trial_id)
+        text = request.POST.get('comment_text')
+        if text:
+            comment = TrialComment.objects.create(user=request.user, trial=trial, text=text)
+            trial.interaction_count += 1  # Añadir interacción
+            trial.save()  
+            return JsonResponse({
+                'success': True,
+                'comment': {
+                    'id': comment.id,
+                    'username': comment.user.username,
+                    'text': comment.text,
+                    'created': comment.created.strftime('%Y-%m-%d %H:%M:%S'),
+                }
+            })
+        return JsonResponse({'success': False, 'error': 'Comment text is required.'})
+
+
+
+class EditTrialCommentView(View):
+    def post(self, request, comment_id):
+        comment = get_object_or_404(TrialComment, id=comment_id, user=request.user)
+        text = request.POST.get('comment_text')
+        if text:
+            comment.text = text
+            comment.save()
+            return JsonResponse({'success': True})
+        return JsonResponse({'success': False, 'error': 'Comment text is required.'})
+
+class DeleteTrialCommentView(View):
+    def post(self, request, comment_id):
+        comment = get_object_or_404(TrialComment, id=comment_id, user=request.user)
+        comment.delete()
+        return JsonResponse({'success': True})
+
+
+
+
+
+def edit_trial(request, id):
+    trial = get_object_or_404(Trial, pk=id)
+
+    if request.method == 'POST':
+        form = TrialForm(request.POST, request.FILES, instance=trial)
+        if form.is_valid():
+            form.save()
+            return redirect('view_trial_detail', id=id)
+    else:
+        form = TrialForm(instance=trial)
+
+    return render(request, 'edit_trial.html', {'form': form, 'trial': trial})
+
+from coinbase.wallet.client import Client
+import os
+from paypal.standard.forms import PayPalPaymentsForm
+from .forms import DonationForm
+
+def donate_view(request, trial_id):
+    trial = get_object_or_404(Trial, pk=trial_id)
+    donation_form = DonationForm(request.POST or None)
+
+    if request.method == 'POST' and donation_form.is_valid():
+        # Obtén la cantidad y el email del donante del formulario
+        amount = donation_form.cleaned_data['amount']
+        donor_email = donation_form.cleaned_data['donor_email']
+
+        # Configuración de PayPal
+        paypal_dict = {
+            "business": os.environ.get('PAYPAL_RECEIVER_EMAIL'),
+            "amount": amount,
+            "item_name": f"Donación para {trial.title}",
+            "invoice": str(trial.id),  # Asegúrate de que sea único
+            "notify_url": request.build_absolute_uri(reverse('paypal-ipn')),
+            "return_url": request.build_absolute_uri(reverse('payment_return')),
+            "cancel_return": request.build_absolute_uri(reverse('payment_cancel')),
+        }
+
+        paypal_form = PayPalPaymentsForm(initial=paypal_dict)
+
+        # Puedes pasar tanto el formulario de PayPal como el formulario de donación a la plantilla
+        return render(request, "payment/paypal_form.html", {
+            "paypal_form": paypal_form,
+            "donation_form": donation_form,
+            "trial": trial
+        })
+
+    # Renderiza el formulario de donación en la plantilla `donate_view.html`
+    return render(request, 'donate_view.html', {
+        'donation_form': donation_form,
+        'trial': trial
+    })
+
+
+
+
+@login_required
+def notifications(request):
+    user_notifications = request.user.notification_set.all()
+
+    # Marcar todas las notificaciones como leídas
+    user_notifications.update(is_read=True)
+
+    return render(request, 'notifications.html', {'notifications': user_notifications})
+
+from .models import MessageNotification
+
+from django.utils.dateparse import parse_datetime
+
+
+
+def check_unread_message_notifications(request):
+    if request.user.is_authenticated:
+        last_viewed_str = request.session.get('last_messages_viewed')
+        last_viewed = parse_datetime(last_viewed_str) if last_viewed_str else None
+
+        print(f"Última visita a los mensajes: {last_viewed}")  # Depuración
+
+        if last_viewed:
+            has_new_messages = MessageNotification.objects.filter(
+                user=request.user, 
+                created_at__gt=last_viewed
+            ).exists()
+            print(f"Has new messages: {has_new_messages}")  # Depuración
+            return JsonResponse({'has_new_messages': has_new_messages})
+        else:
+            print("No se encontró la última visita, asumiendo mensajes nuevos.")  # Depuración
+            return JsonResponse({'has_new_messages': True})
+    else:
+        print("Usuario no autenticado.")  # Depuración
+    return JsonResponse({'has_new_messages': False})
+
+
+
+
+
+@login_required
+def trial_contact(request, trial_id):
+    trial = get_object_or_404(Trial, pk=trial_id)
+
+    if request.user not in trial.administrators.all():
+        return redirect('home')
+
+    # Obtener todas las instancias de Application para este ensayo
+    applications = Application.objects.filter(trial=trial)
+
+    context = {
+        'trial': trial,
+        'applications': applications,
+    }
+
+    return render(request, 'trial_contact.html', context)
+
+
+
+@login_required
+def get_application_details(request, application_id):
+    application = get_object_or_404(Application, pk=application_id)
+
+    # Comprobar si el usuario es administrador del trial asociado a la aplicación
+    if request.user in application.trial.administrators.all():
+        return JsonResponse({
+            'success': True,
+            'application': {
+                'user': application.user.username,
+                'meets_requirements': application.meets_requirements,
+                'wants_to_apply': application.wants_to_apply,
+                'message': application.message
+            }
+        })
+    else:
+        # Si el usuario no es administrador, redirigir a 'home' o mostrar un mensaje de error
+        return redirect('home')  # O p
+    
+
+from django.views.decorators.csrf import csrf_exempt
+from decimal import Decimal
+import json
+
+
+
+@csrf_exempt
+def update_donation(request, trial_id):  # Ahora 'trial_id' es un parámetro de la función
+    if request.method == 'POST':
+        print("Received request for trial ID:", trial_id)
+        data = json.loads(request.body)
+        print("Received data:", data)
+        amount = data.get('amount')
+        
+        trial = get_object_or_404(Trial, pk=trial_id)
+        trial.update_donation(Decimal(amount))
+        trial.interaction_count += 1  # Añadir interacción
+        trial.save()  
+        
+        return JsonResponse({'status': 'success', 'message': 'Donation updated successfully.'})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
+
+
+
+from .models import Message, MessageReadStatus
+from .forms import GroupChatForm, NewChatForm
+from django.db.models import Max
+from django.db.models import Exists, OuterRef
+from django.utils import timezone
+
+@login_required
+def messages(request, chat_group_id=None):
+    request.session['last_messages_viewed'] = timezone.now().isoformat()
+    if chat_group_id:
+        MessageReadStatus.objects.filter(
+            user=request.user, 
+            message__chat_group_id=chat_group_id, 
+            is_read=False
+        ).update(is_read=True)
+
+    chat_form = GroupChatForm(request.POST or None)
+    new_chat_form = NewChatForm(request.POST or None)
+
+    # Actualizar estados de mensajes no leídos para cada grupo de chat
+    chat_groups = request.user.chat_groups.annotate(
+        last_message_date=Max('messages__timestamp'),
+        has_unread_messages=Exists(
+            MessageReadStatus.objects.filter(
+                message__chat_group=OuterRef('pk'),
+                is_read=False,
+                user=request.user
+            )
+        )
+    ).order_by('-last_message_date')
+
+    selected_chat_group = None
+    messages = None
+
+    if request.method == 'POST':
+        if 'create_group' in request.POST and chat_form.is_valid():
+            chat_group = chat_form.save(commit=False)
+            chat_group.save()
+            chat_group.members.add(request.user)
+            chat_group.save()
+            return redirect('messages')
+        elif 'create_chat' in request.POST and new_chat_form.is_valid():
+            chat_group = new_chat_form.save(commit=False)
+            chat_group.save()
+            selected_users = new_chat_form.cleaned_data['users']
+            for user in selected_users:
+                chat_group.members.add(user)
+            chat_group.members.add(request.user)
+            chat_group.save()
+
+            # Crear MessageReadStatus para los nuevos chats
+            for member in chat_group.members.exclude(id=request.user.id):
+                for message in chat_group.messages.all():
+                    status, created = MessageReadStatus.objects.get_or_create(
+                        user=member, 
+                        message=message, 
+                        defaults={'is_read': False}
+                    )
+                    if created:
+                        print(f"Creado MessageReadStatus: Usuario {member.username}, Mensaje {message.id}, No Leído")
+                    else:
+                        print(f"Ya existe MessageReadStatus: Usuario {member.username}, Mensaje {message.id}, Estado Leído {status.is_read}")
+            return redirect('messages')
+
+    if chat_group_id:
+        try:
+            selected_chat_group = ChatGroup.objects.get(id=chat_group_id, members=request.user)
+            messages = selected_chat_group.messages.order_by('timestamp').all()
+        except ChatGroup.DoesNotExist:
+            return redirect('messages')
+
+    elif chat_groups.exists():
+        # Agregamos impresiones para depuración
+        for cg in chat_groups:
+            print(f"Chat Group: {cg.name}, Unread Messages: {'Yes' if cg.has_unread_messages else 'No'}")
+        selected_chat_group = chat_groups.first()
+        messages = selected_chat_group.messages.order_by('timestamp').all()
+
+    # Impresiones para depuración
+    for cg in chat_groups:
+        print(f"Chat Group: {cg.name}, Unread Messages: {'Yes' if cg.has_unread_messages else 'No'}")
+
+    return render(request, 'messages.html', {
+        'chat_groups': chat_groups,
+        'chat_form': chat_form,
+        'new_chat_form': new_chat_form,
+        'selected_chat_group': selected_chat_group,
+        'messages': messages,
+    })
+
+from django.views.decorators.http import require_POST
+
+
+@require_POST
+@login_required
+def create_chat(request):
+    form = NewChatForm(request.POST)
+    if form.is_valid():
+        selected_users = form.cleaned_data['users']
+
+        # Para chats grupales (más de 2 personas incluyendo al usuario actual) el nombre es obligatorio
+        if len(selected_users) >= 2:
+            if not form.cleaned_data['name']:
+                # Si no se proporciona un nombre para un chat grupal, retorna un error
+                return JsonResponse({'status': 'error', 'errors': {'name': ['Name is required for group chats.']}}, status=400)
+
+            chat_group = form.save()
+            for user in selected_users:
+                chat_group.members.add(user)
+            chat_group.members.add(request.user)
+        else:
+            # Para chats de dos personas, se crea un chat sin nombre específico
+            chat_group = ChatGroup.get_or_create_chat(request.user, selected_users.first())
+        
+        return JsonResponse({'status': 'success', 'chat_group_id': chat_group.id, 'chat_group_name': chat_group.name})
+    else:
+        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+    
+
+    
+from .models import ChatGroup
+
+@login_required
+def get_chat_messages(request, chat_group_id):
+    try:
+        chat_group = ChatGroup.objects.get(id=chat_group_id, members=request.user)
+        messages = chat_group.messages.order_by('timestamp').values('text', 'sender__username', 'timestamp')
+        return JsonResponse({'messages': list(messages)})
+    except ChatGroup.DoesNotExist:
+        return JsonResponse({'error': 'Chat group not found'}, status=404)
+    
+
+@login_required
+def send_message(request, chat_group_id):
+    if request.method == 'POST':
+        text = request.POST.get('text')
+        if text:
+            message = Message.objects.create(
+                chat_group_id=chat_group_id,
+                sender=request.user,
+                text=text
+            )
+            print(f"Mensaje creado: {message.text}")
+
+            # Obtener todos los miembros del chat_group, excepto el remitente
+            chat_group = ChatGroup.objects.get(id=chat_group_id)
+            recipients = chat_group.members.exclude(id=request.user.id)
+
+            # Crear MessageReadStatus y MessageNotification para cada destinatario
+            for recipient in recipients:
+                MessageReadStatus.objects.create(
+                    user=recipient,
+                    message=message,
+                    is_read=False  # Marcar como no leído
+                )
+                notification = MessageNotification.objects.create(
+                    user=recipient,
+                    message=message.text,  # o cualquier otro campo relevante de tu modelo Message
+                    is_read=False,
+                    created_at=message.timestamp  # Asegúrate de que 'timestamp' es la hora de creación del mensaje
+                )
+                print(f"Notificación creada para {recipient.username}: {notification.message}")
+
+            return JsonResponse({'status': 'success', 'message': {
+                'text': message.text,
+                'sender_username': request.user.username,
+                'timestamp': message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+            }})
+        else:
+            return JsonResponse({'status': 'error', 'error': 'Empty message'}, status=400)
+    return JsonResponse({'status': 'error', 'error': 'Invalid request'}, status=400)
+
+
+
+@login_required
+def start_chat(request, username):
+    other_user = get_object_or_404(User, username=username)
+    chat_group = ChatGroup.get_or_create_chat(request.user, other_user)
+
+    return redirect('messages_with_id', chat_group_id=chat_group.id)
+    return redirect(messages_url)
+
+
+@login_required
+def join_chat_group(request, chat_group_id):
+    chat_group = get_object_or_404(ChatGroup, id=chat_group_id)
+    chat_group.members.add(request.user)
+
+    return redirect('messages_with_id', chat_group_id=chat_group.id)
+    return redirect(messages_url)
+
+
+
+@login_required
+def get_chat_group_info(request, chat_group_id):
+    try:
+        chat_group = ChatGroup.objects.get(id=chat_group_id, members=request.user)
+        member_count = chat_group.members.count()
+        return JsonResponse({
+            'member_count': member_count,
+            'is_two_person_chat': member_count == 2
+        })
+    except ChatGroup.DoesNotExist:
+        return JsonResponse({'error': 'Chat group not found'}, status=404)
+    
+
+
+
+@login_required
+def chat_action(request, chat_group_id):
+    chat_group = get_object_or_404(ChatGroup, id=chat_group_id)
+
+    if request.method == 'POST':
+        if chat_group.is_two_person_chat():
+            # En el caso de un chat de dos personas, borra solo para el usuario actual.
+            chat_group.members.remove(request.user)
+            action = 'deleted'
+        else:
+            # En el caso de un grupo, el usuario abandona el grupo.
+            chat_group.members.remove(request.user)
+            action = 'left'
+
+            # Si el grupo queda vacío, eliminarlo.
+            if chat_group.members.count() == 0:
+                chat_group.delete()
+
+        return JsonResponse({'status': 'success', 'action': action})
+
+    return JsonResponse({'status': 'error'}, status=400)
+
+
+
+@login_required
+def get_chat_group_members(request, chat_group_id):
+    chat_group = get_object_or_404(ChatGroup, id=chat_group_id)
+
+    # Asegurarse de que el usuario es miembro del grupo
+    if request.user not in chat_group.members.all():
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+
+    members = [
+    {
+        'username': member.username,
+        'profile_url': reverse('profile', args=[member.username])
+    }
+    for member in chat_group.members.all()
+]
+    print("Members in group:", list(members))  # Agregar esta línea
+    return JsonResponse({'members': list(members)})
+
+
+@login_required
+def mark_messages_as_read(request, chat_group_id):
+    if request.method == 'POST':
+        # Obtener el grupo de chat
+        chat_group = get_object_or_404(ChatGroup, id=chat_group_id, members=request.user)
+
+        # Imprimir para depuración
+        print(f"Marcando como leídos los mensajes del grupo de chat {chat_group_id} para el usuario {request.user.username}")
+
+        # Obtener y actualizar el estado de los mensajes a leído
+        unread_messages = MessageReadStatus.objects.filter(
+            user=request.user,
+            message__chat_group=chat_group,
+            is_read=False
+        )
+        
+        # Imprimir cantidad de mensajes no leídos para depuración
+        print(f"Se encontraron {unread_messages.count()} mensajes no leídos.")
+
+        # Actualizar mensajes a leído
+        unread_messages.update(is_read=True)
+
+        # Confirmar acción para depuración
+        print(f"Mensajes marcados como leídos.")
+
+        return JsonResponse({'status': 'success'})
+
+    # Mensaje de error si el método no es POST
+    print("Error: Método de solicitud no es POST.")
+    return JsonResponse({'status': 'error'}, status=400)

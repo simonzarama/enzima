@@ -1,116 +1,366 @@
 
-{% load static %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-{% block content %}
-    <!-- Resto del contenido de tu página -->
-    <section id="top-communities">
-        <div id="top-communities-container">
-            <h2>Top Communities</h2>
-            {% for community in top_communities %}
-                <div class="feature-box">
-                    <i class="fas fa-vial icon"></i>
-                    <a href="{% url 'view_community' community_name=community.name %}">{{ community.name }}</a>
-                </div>
-            {% empty %}
-                <div style="grid-column: span 3; text-align: center;">No communities found.</div>
-            {% endfor %}
+<div class="hc-centrar-contenido">
+    {% for campaign in campaigns %}
+    <article class="hc-post">
+        <div class="hc-author-info">
+            Published by:
+            <a href="{% url 'profile' campaign.creator.username %}" class="hc-link-blanco">{{ campaign.creator.username }}</a>
+            {% if campaign.communities.all %}
+                on
+                {% for community in campaign.communities.all %}
+                    <a href="{% url 'view_community' community.name %}" class="hc-link-blanco">{{ community.name }}</a>
+                    {% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            {% endif %}
         </div>
-    </section>
-    
+        
+        <div class="hc-content-box">
+            <a href="{% url 'view_campaign_detail' campaign.id %}" class="hc-post-link">
+                <h3 id="hc-campaign-title-{{ campaign.id }}">{{ campaign.title }}</h3>
+                <p>{{ campaign.description|linebreaks }}</p>
 
-
-
-    <div style="text-align:center;">
-        <h2>Recommended Healthcare Communities</h2>
-        <br>
-        <div class="buttons-container">
-            <a href="https://www.vitalia.city/" target="_blank">
-                <img src="{% static 'myapp/images/vitalia.png' %}" alt="Vitalia" class="community-button">
+                {% if campaign.media_file %}
+                    {% if campaign.media_file.url|lower|endswith:".mp4" or campaign.media_file.url|lower|endswith:".webm" %}
+                        <video controls id="hc-campaign-file-{{ campaign.id }}">
+                            <source src="{{ campaign.media_file.url }}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    {% else %}
+                        <img src="{{ campaign.media_file.url }}" alt="Media file" class="hc-media-thumbnail" id="hc-campaign-file-{{ campaign.id }}">
+                    {% endif %}
+                {% endif %}
             </a>
-            <a href="https://www.prospera.co/" target="_blank">
-                <img src="{% static 'myapp/images/prospera.png' %}" alt="Prospera" class="community-button">
+        </div>
+
+        <div class="hc-post-separator"></div>
+
+        <div class="hc-post-actions">
+            
+            <!-- Contador de comentarios -->
+            <p class="hc-comment-count">{{ campaign.comments.count }} Comment{{ campaign.comments.count|pluralize }}</p>
+            
+            <!-- Botón de Like -->
+
+            <a href="#" home-campaign-id="{{ campaign.id }}" class="hc-like-button" data-liked="{{ campaign.is_liked|yesno:'true,false' }}">
+                {{ campaign.is_liked|yesno:"Unlike,Like" }}
             </a>
+            
+            
+            <span id="hc-like-count-{{ campaign.id }}">{{ campaign.likes_count }} Like{{ campaign.likes_count|pluralize }}</span>
+            
+            <!-- Botón de Guardar -->
+            <button data-campaign-id="{{ campaign.id }}" class="hc-save-btn">
+                {% if campaign.id in saved_campaign_ids %}
+                    Unsave
+                {% else %}
+                    Save
+                {% endif %}
+            </button>
+            <!-- Opciones de más si el usuario es el creador de la campaña -->
+            {% if request.user == campaign.creator %}
+            <div class="hc-more-options-container">
+                <!-- Cambia el nombre del botón "More Options" para incluir el ID de la campaña -->
+                <button class="hc-more-options-button" data-campaign-id="{{ campaign.id }}" id="hc-more-options-btn-{{ campaign.id }}">More Options</button>
+                <div class="hc-options-container" id="hc-options-container-{{ campaign.id }}" style="display:none;">
+                    <!-- Cambia el nombre del botón "Edit" para incluir el ID de la campaña -->
+                    <button class="hc-editar-crowdfunding" data-campaign-id="{{ campaign.id }}" id="hc-edit-btn-{{ campaign.id }}">Edit</button>
+                    <!-- Cambia el nombre del botón "Delete" para incluir el ID de la campaña -->
+                    <button class="hc-eliminar-crowdfunding" data-campaign-id="{{ campaign.id }}" data-url-base="{% url 'delete_campaign' 0 %}" id="hc-delete-btn-{{ campaign.id }}">Delete</button>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Botón de Donar (mantenido al final y a la derecha) -->
+            <a href="#" data-campaign-id="{{ campaign.id }}" class="hc-donate-button">Donate</a>
+        </div>
+        <!-- ... -->
+    </article>
+
+    <br>
+    <br>
+
+    <div id="hc-delete-confirmation-{{ campaign.id }}" class="hc-delete-confirmation" style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border: 1px solid black;">
+        <p>Are you sure you want to delete this campaign?</p>
+        <div class="hc-button-container" style="display: flex; justify-content: space-around;">
+            <button class="hc-cancelar-eliminar" data-campaign-id="{{ campaign.id }}" data-dismiss="hc-delete-confirmation-{{ campaign.id }}">Cancel</button>
+            <button class="hc-confirmar-eliminar btn hc-eliminar-crowdfunding" data-campaign-id="{{ campaign.id }}">Delete</button>
         </div>
     </div>
     
+    <div id="hc-edit-campaign-container-{{ campaign.id }}" class="hc-edit-campaign-container" style="display:none; border: 1px solid black;">
+        <form id="hc-edit-campaign-form-{{ campaign.id }}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="hc-form-group">
+                <label for="hc-edit-title-{{ campaign.id }}">Title:</label>
+                <input type="text" id="hc-edit-title-{{ campaign.id }}" name="title" required="" value="{{ campaign.title }}" style="border: 1px solid black;">
+            </div>
+            <div class="hc-form-group">
+                <label for="hc-edit-description-{{ campaign.id }}">Description:</label>
+                <textarea id="hc-edit-description-{{ campaign.id }}" name="description" style="border: 1px solid black; width: 800px; min-height: 300px;">{{ campaign.description }}</textarea>
+            </div>
+            <div class="hc-form-group">
+                <label for="hc-edit-file-input-{{ campaign.id }}">Attach file:</label>
+                <input type="file" id="hc-edit-file-input-{{ campaign.id }}" name="media_file" multiple accept="image/*,video/*">
+                <div id="hc-current-file-{{ campaign.id }}">
+                    {% if current_media_filename %}
+                        Current File: {{ current_media_filename }}
+                    {% endif %}
+                </div>
+                <input type="checkbox" id="hc-remove-media-file-{{ campaign.id }}" name="remove_media_file" value="true">
+                <label for="hc-remove-media-file-{{ campaign.id }}">Delete File</label>
+            </div>
+            <div class="hc-edit-buttons-container">
+                <button type="submit" class="hc-save-changes-button">Save Changes</button>
+                <button type="button" class="hc-cancel-edit-campaign-button hc-cancel-button" data-dismiss="hc-edit-campaign-container-{{ campaign.id }}">Cancel</button>
+            </div>
+        </form>
+    </div>
+    
+    {% empty %}
+        <p>No hay recursos etiquetados en esta comunidad aún.</p>
+    {% endfor %}
+</div>
 
-    <!-- Resto del contenido de tu página -->
+
+<script>
+
+console.log("Script dinámico cargado (campaigns)");
+
+// No necesitas modificar el bloque $(document).ready si Django ya establece el texto correctamente.
+$(document).ready(function() {
+    // Si necesitas inicializar el estado de los botones en la carga, puedes descomentar este bloque.
+    /*
+    $('.hc-like-button').each(function() {
+        var isLiked = $(this).data('liked') === 'true';
+        $(this).text(isLiked ? 'Unlike' : 'Like');
+    });
+    */
+});
+
+// Manejador de evento para los clicks en los botones de 'like'.
+$(document).on('click', '.hc-like-button', function(e) {
+    e.preventDefault(); // Evita que el navegador siga el enlace.
+
+    var buttonClicked = $(this);
+    var campaignId = buttonClicked.attr('home-campaign-id'); // Cambiado de .data() a .attr() para garantizar la consistencia.
+
+    console.log("Realizando petición AJAX para la campaña con ID:", campaignId);
+
+    $.ajax({
+        url: '/like_campaign/' + campaignId + '/',
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': $('input[name="csrfmiddlewaretoken"]').val()
+        },
+        data: {
+            'campaign_id': campaignId
+        },
+        success: function(response) {
+            console.log("Respuesta del servidor:", response);
+
+            buttonClicked.text(response.is_liked ? 'Unlike' : 'Like');
+            buttonClicked.attr('data-liked', response.is_liked.toString());
+
+            var likesCountElement = $('#hc-like-count-' + campaignId);
+            if (likesCountElement.length === 0) {
+                console.error('Elemento para el contador de likes no encontrado.');
+            } else {
+                likesCountElement.text(response.likes_count + (response.likes_count === 1 ? ' Like' : ' Likes'));
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error("Error en la respuesta de AJAX:", xhr.responseText);
+        }
+    });
+});
+
+// SAVE
+
+console.log("Inicio de save para campañas con hc-save-btn");
+
+document.addEventListener('click', function(e) {
+    // Verificamos si el elemento clickeado tiene la clase 'hc-save-btn'
+    if (e.target.classList.contains('hc-save-btn')) {
+        const button = e.target; // Referencia al botón que fue clickeado
+        const campaignId = button.getAttribute('data-campaign-id');
+        const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content");
+
+        console.log(campaignId); // Asegurarse de que estamos obteniendo un ID válido
+
+        // Iniciar la solicitud fetch
+        fetch(`/campaign/${campaignId}/save/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json',
+                // Puedes necesitar añadir otros headers aquí según la configuración de tu servidor
+            },
+            body: JSON.stringify({}) // Si necesitas enviar un cuerpo con la solicitud, agrégalo aquí
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log(data); // Imprimir la respuesta en la consola
+            button.textContent = data.saved ? "Unsave" : "Save";
+            // Si necesitas actualizar otra parte de tu interfaz de usuario en respuesta a la acción de guardar, hazlo aquí
+        })
+        .catch(error => {
+            console.log(error); // Manejar errores
+        });
+    }
+});
 
 
+// MORE OPTIONS
+
+console.log("Inicio de hc-more options");
+
+// Manejo del clic en el botón "hc-More Options"
+$(document).on('click', '.hc-more-options-button', function(event) {
+    event.stopPropagation(); // Previene que el evento se propague a elementos padres
+    const campaignId = $(this).data("campaign-id"); // Obtiene el ID de la campaña
+    const optionsContainer = $('#hc-options-container-' + campaignId); // Encuentra el contenedor de opciones correspondiente
+    optionsContainer.toggle(); // Muestra u oculta el contenedor de opciones
+});
+
+// Clic en cualquier lugar fuera de los contenedores de opciones los oculta
+$(document).click(function(event) {
+    $('.hc-options-container').each(function() {
+        const isClickInside = $(this).is(event.target) || $(this).has(event.target).length !== 0;
+
+        if (!isClickInside && $(this).is(':visible')) {
+            $(this).hide(); // Oculta el contenedor si se clickea fuera
+        }
+    });
+});
+
+// Prevenir que el clic dentro del contenedor de opciones se propague
+$(document).on('click', '.hc-options-container', function(event) {
+    event.stopPropagation();
+});
 
 
+// DELETE 
 
-<style>
+// Activar la ventana de confirmación de eliminación
+$(document).on('click', '.hc-eliminar-crowdfunding', function() {
+    console.log("Botón de eliminación clickeado: ", this);
+    const campaignId = $(this).data('campaign-id');
+    console.log("Intentando mostrar confirmación para ID:", campaignId);
 
-#top-communities-container {
-  width: 95%;
-  margin: 20px auto; /* Ajusta el margen superior e inferior como prefieras */
-  display: grid;
-  grid-template-columns: repeat(3, 1fr); /* Ahora tendremos 3 columnas */
-  grid-gap: 10px;
-  padding: 20px;
+    const deleteConfirmationElement = $('#hc-delete-confirmation-' + campaignId);
+    if (deleteConfirmationElement.length) {
+        console.log("Elemento de confirmación encontrado:", deleteConfirmationElement);
+        deleteConfirmationElement.show();
+    } else {
+        console.error("Elemento de confirmación no encontrado para ID:", campaignId);
+        console.error("No se pudo encontrar ningún elemento con el ID #hc-delete-confirmation-" + campaignId);
+    }
+});
 
+// Ocultar la ventana de confirmación cuando se hace clic en "Cancel"
+$(document).on('click', '.hc-cancelar-eliminar', function() {
+    const campaignId = $(this).data('campaign-id');
+    $('#hc-delete-confirmation-' + campaignId).hide();
+});
+
+// Manejar la eliminación cuando se hace clic en "Delete"
+$(document).on('click', '.hc-confirmar-eliminar', function() {
+    const campaignId = $(this).data('campaign-id');
+    // Aquí puedes agregar el código para llamar a una función que maneje la eliminación real de la campaña.
+    // Por ejemplo:
+    hcDeleteCampaign(campaignId);
+});
+
+function hcDeleteCampaign(campaignId) {
+    // Confirmar una vez más que el usuario desea eliminar
+    if (!confirm('Are you sure you want to delete this campaign?')) return;
+
+    // Llamada AJAX para eliminar la campaña
+    $.ajax({
+        url: '/delete_campaign/' + campaignId + '/',
+        type: 'POST',
+        data: {
+            'csrfmiddlewaretoken': '{{ csrf_token }}', // Asegúrate de incluir el token CSRF si estás utilizando Django
+            'campaign_id': campaignId
+        },
+        success: function(response) {
+            // Si la eliminación fue exitosa, ocultar la ventana de confirmación y eliminar el elemento de la campaña del DOM
+            $('#hc-delete-confirmation-' + campaignId).hide();
+            $('#hc-campaign-container-' + campaignId).remove();
+            location.reload();
+        },
+        error: function(error) {
+            console.error('There was an error deleting the campaign:', error);
+        }
+    });
 }
 
-#top-communities-container h2 {
-  grid-column: span 3; /* Asegúrate de que el título abarque las 3 columnas */
-  text-align: center;
-}
+//EDIT
 
-#top-communities-container .feature-box {
-  background: transparent;
-  padding: 20px;
-  display: flex;
-  justify-content: center;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  border-radius: 0;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
+// Open the edit campaign modal
+$(document).on('click', '.hc-editar-crowdfunding', function() {
+    const campaignId = $(this).data("campaign-id");
+    if (typeof campaignId === 'undefined') {
+        console.error('campaignId is undefined. Button data:', $(this).data());
+    } else {
+        $.ajax({
+            url: "/get_campaign_data/" + campaignId + "/", // Adjust if different URL for hc
+            method: 'GET',
+            success: function(response) {
+                $('#hc-edit-title-' + campaignId).val(response.title);
+                $('#hc-edit-description-' + campaignId).val(response.description);
+                $('#hc-edit-campaign-container-' + campaignId).show();
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error:', errorThrown);
+            }
+        });
+    }
+});
 
+// Close the edit campaign modal when cancel is clicked
+$(document).on('click', '.hc-cancel-button', function() {
+    const campaignId = $(this).data("dismiss").split('-')[4]; // Adjust the index according to the id pattern
+    $('#hc-edit-campaign-container-' + campaignId).hide();
+});
 
-#top-communities-container .icon {
-  color: white;
-  margin-right: 10px;
-}
- 
- 
+// Submit the form and update the campaign
+$(document).on('submit', 'form[id^="hc-edit-campaign-form-"]', function(e) {
+    e.preventDefault();
+    const campaignId = this.id.split('-')[4]; // Adjust the index according to the id pattern
+    const formData = new FormData(this);
 
-#recommended-healthcare {
-  text-align: center;
-  margin-top: 20px; /* Ajusta el margen superior como prefieras */
-}
-
-#recommended-healthcare h2 {
-  margin-bottom: 20px; /* Ajusta el margen inferior del título como prefieras */
-}
-
-.buttons-container {
-        display: flex;
-        justify-content: center;
-        gap: 120px; /* Aumenta el espacio entre los botones a 120px */
+    if ($('#hc-remove-media-file-' + campaignId).prop('checked')) {
+        formData.append('remove_media_file', 'true');
     }
 
-    .community-button {
-        width: 300px;
-        height: 100px;
-        object-fit: cover; /* Esto asegura que las imágenes se recorten en lugar de deformarse */
-        border-radius: 15px; /* Esto le da una curvatura a los botones */
-        margin: 0 50px; /* Esto empuja cada botón 50px a sus lados respectivos */
-    }
-.buttons-container a {
-  display: block;
-}
+    $.ajax({
+        url: "/campaign/" + campaignId + "/update_ajax/", // Adjust if different URL for hc
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                $('#hc-edit-campaign-container-' + campaignId).hide();
+                location.reload();
+            } else {
+                console.error('Error del servidor:', response.error);
+            }
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.error('Error:', errorThrown);
+        }
+    });
+});
 
-.buttons-container img {
-  width: 300px;
-  height: 100px;
-  object-fit: cover; /* Asegúrate de que las imágenes cubran el área sin deformarse */
-}
-
-</style>
 
 
-{% endblock %}
+</script>

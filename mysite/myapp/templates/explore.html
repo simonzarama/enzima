@@ -9,7 +9,6 @@
             <h2>Top Communities</h2>
             {% for community in top_communities %}
                 <div class="feature-box">
-                    <i class="fas fa-vial icon"></i>
                     <a href="{% url 'view_community' community_name=community.name %}">{{ community.name }}</a>
                 </div>
             {% empty %}
@@ -121,7 +120,7 @@
   align-items: center;
   text-align: center;
   border: 1px solid white;
-  border-radius: 50px;
+  border-radius: 0px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 

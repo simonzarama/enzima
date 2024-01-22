@@ -2,18 +2,64 @@
 {% load static %}
 <link rel="stylesheet" type="text/css" href="{% static 'myapp/styles.css' %}">
 
-
 {% block content %}
 
-<br>
-<br>
-<br>
-
 <div class="centrar-contenido">
-    <form method="post">
+    <form method="post" class="community-form">
         {% csrf_token %}
-        {{ form.as_p }}
+        <div class="form-field">
+            <label for="id_name">Name:</label>
+            {{ form.name }}
+        </div>
         <button type="submit">Create Community</button>
     </form>
 </div>
+
+
+
+<style>
+.centrar-contenido {
+    display: flex;
+    justify-content: center; /* Centrado horizontal */
+    align-items: center; /* Centrado vertical */
+    height: 100vh; /* Altura total de la ventana */
+}
+
+.centrar-contenido .community-form {
+    background-color: rgb(39, 39, 39); /* Color de fondo oscuro */
+    color: white; /* Texto en color blanco */
+    padding: 20px; /* Espaciado interno */
+    border: 1px solid white; /* Borde blanco */
+    border-radius: 5px; /* Bordes redondeados */
+    width: 800px; /* Ancho fijo */
+    box-sizing: border-box; /* El ancho incluye el padding y el borde */
+    margin: 0 20px; /* Margen horizontal para evitar que el contenedor toque los bordes de la pantalla */
+}
+
+.centrar-contenido .community-form .form-field {
+    margin-bottom: 20px; /* Espacio debajo de cada campo */
+}
+
+.centrar-contenido .community-form .form-field input[type="text"] {
+    width: calc(100% - 40px); /* 100% del contenedor padre menos 40px de margen total */
+    padding: 10px; /* Espaciado interno */
+    background-color: white; /* Fondo blanco para el input */
+    color: black; /* Texto en color negro */
+    border: 1px solid #ccc; /* Borde sutil */
+    border-radius: 4px; /* Bordes redondeados */
+    margin: 0; /* Sin margen exterior */
+}
+
+.centrar-contenido .community-form button[type="submit"] {
+    background-color:rgb(234, 216, 127);
+    color: black; /* Color del texto */
+    border: none; /* Sin bordes */
+    padding: 10px 20px; /* Espaciado interno */
+    cursor: pointer; /* Cursor tipo puntero */
+    border-radius: 4px; /* Bordes redondeados */
+    width: auto; /* Ancho auto para ajustarse al contenido del botón */
+}
+
+</style>
+
 {% endblock %}

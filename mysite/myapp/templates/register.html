@@ -5,69 +5,64 @@
 
 {% block content %}
 <div class="centrar-contenido">
-    <h2> Sign Up</h2>
+    
     <form method="post">
+        <h2> Sign Up</h2>
+        <br>
         {% csrf_token %}
         {{ form.as_p }}
-        <button type="submit">Registrarse</button>
+        <br>
+        <button class="register-button" type="submit">Register</button>
     </form>
 </div>
 
+
+
 <style>
-/* Estilos generales */
-.centrar-contenido {
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: center;
-    min-height: 100vh; /* Asegura que ocupe toda la altura de la ventana. */
-}
+    /* Estilos del formulario */
+    .centrar-contenido form {
+        background-color: rgb(39, 39, 39); 
+        color: white; 
+        padding: 20px;
+        border: 1px solid white; 
+        border-radius: 5px; 
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); 
+        width: 100%;
+        max-width: 400px; 
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column; /* Asegura que los campos estén alineados verticalmente */
+    }
 
-.centrar-contenido h2 {
-    margin-bottom: 20px; /* Espacio debajo del título */
-    color: #808080; /* Color gris para que coincida con el fondo del formulario */
-}
+    /* Estilos para los mensajes de error de Django */
+    .errorlist {
+        font-size: 0.8em; /* Reduce el tamaño de la fuente de los mensajes de error */
+        color: red;
+        margin-top: 5px; /* Añade espacio entre el campo de entrada y el mensaje de error */
+    }
 
-/* Estilos del formulario */
-.centrar-contenido form {
-    background-color: #808080; 
-    padding: 20px;
-    border: 1px solid white; 
-    border-radius: 5px; 
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); 
-    width: 100%;
-    max-width: 400px; 
-    box-sizing: border-box;
-}
+    /* Estilos para los campos del formulario */
+    .centrar-contenido form p {
+        display: flex;
+        flex-direction: column; /* Asegura que los elementos dentro del párrafo estén alineados verticalmente */
+        margin-bottom: 15px; /* Espacio entre los campos */
+    }
 
-.centrar-contenido form button {
-    display: block; 
-    margin: 10px auto; 
-    padding: 10px 20px;
-    background-color:  rgb(234, 216, 127); 
-    color: #000000; 
-    border: 1px solid white; 
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
+    form p .helptext {
+        font-size: 0.8em; /* Tamaño más pequeño para el texto de ayuda */
+        color: #ccc; /* Cambiar el color si es necesario */
+        display: block; /* Hace que el texto comience en una nueva línea */
+        margin-top: 5px; /* Espacio arriba del mensaje */
+    }
 
-.centrar-contenido form button:hover {
-    background-color: rgb(234, 127, 127); 
-}
+    .register-button {
+        font-size: 1.1em; /* Tamaño de la fuente más grande */
+        padding: 12px 20px; /* Ajustar el padding si es necesario */
+    }
 
-/* Estiliza los campos del formulario generados por Django */
-.centrar-contenido form p {
-    margin-bottom: 15px; /* Espacio entre los campos */
-}
-
-.centrar-contenido form label {
-    display: block; /* Asegura que las etiquetas estén sobre los campos */
-    margin-bottom: 5px; /* Espacio entre etiqueta y campo */
-}
-
-
-
-
+    .centrar-contenido form label {
+        margin-bottom: 5px; /* Espacio de 5px debajo del texto de la etiqueta */
+    }
 </style>
 
 {% endblock %}

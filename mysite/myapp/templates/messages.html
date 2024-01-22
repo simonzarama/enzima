@@ -1,7 +1,844 @@
 {% extends 'base_user.html' %}
+{% load custom_filters %}
+{% load static %}
 
 {% block content %}
-    <h1>Tus mensajes</h1>
-    <p>Aquí se mostrarán todos los mensajes del usuario.</p>
-    <!-- Puedes añadir más elementos según lo requieras, por ejemplo, una lista de mensajes. -->
+<!-- chat.html -->
+
+<!-- Bootstrap CSS -->
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+<div class="chat-container">
+    <div class="chat-sidebar">
+        <!-- Botón que activa el modal -->
+        <button type="button" class="btn btn-primary write-message-btn" data-toggle="modal" data-target="#newChatModal">
+            Write a Message
+        </button>        
+        {% if chat_groups %}
+            {% for chat_group in chat_groups %}
+            <button class="chat-list-item {% if chat_group.has_unread_messages %}unread{% endif %}" onclick="openChat('{{ chat_group.id }}')" data-chat-group-id="{{ chat_group.id }}">
+                {% if chat_group.community %}
+                    {{ chat_group.community.name }} Chat Group
+                {% elif chat_group.members.count == 2 %}
+                    {% for member in chat_group.members.all %}
+                        {% if member != request.user %}
+                            {{ member.username }}
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    {{ chat_group.name }}
+                {% endif %}
+            </button>
+        {% endfor %}
+    
+        {% else %}
+            <div class="no-messages">No messages yet</div>
+        {% endif %}
+    </div>
+    
+    <div class="chat-main">
+        <div class="chat-header" data-is-two-person-chat="{% if selected_chat_group.is_two_person_chat %}true{% else %}false{% endif %}"  style="background-color: rgb(39, 39, 39); color: white; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid white;">
+            {% if selected_chat_group %}
+                <span>
+                    {% if selected_chat_group.community %}
+                        {{ selected_chat_group.community.name }} Chat Group
+                    {% elif selected_chat_group.members.count == 2 %}
+                        {% for member in selected_chat_group.members.all %}
+                            {% if member != request.user %}
+                                {{ member.username }}
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        {{ selected_chat_group.name }}
+                    {% endif %}
+                </span>            
+                <i class="fas fa-bars" onclick="toggleDropdownMenu()"></i>
+                <div id="dropdown-menu" class="dropdown-menu" style="display: none;">
+                    <button onclick="handleChatAction()">
+                        {% if selected_chat_group.is_two_person_chat %}
+                            Delete
+                        {% else %}
+                            Leave
+                        {% endif %}
+                    </button>
+                    {% if not selected_chat_group.is_two_person_chat or selected_chat_group.community %}
+                        <button onclick="openMembersModal()">Members</button>
+                    {% endif %}
+                
+
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="chat-messages">
+            <!-- ... mensajes ... -->
+        </div>
+
+        <div class="chat-input" style="background-color: rgb(39, 39, 39); border: 1px solid white;">
+            <textarea id="messageText" placeholder="Type your message here..." style="background-color: rgb(39, 39, 39); color: white; border: 1px solid white;"></textarea>
+            <button onclick="sendMessage()" class="send-message-btn">Send</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal para nuevo chat -->
+<div class="modal fade" id="newChatModal" tabindex="-1" role="dialog" aria-labelledby="newChatModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newChatModalLabel">New Message</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Formulario para crear un nuevo chat -->
+                <form id="new-chat-form" method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="{{ new_chat_form.users.id_for_label }}">Add Users:</label>
+                        {{ new_chat_form.users }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ new_chat_form.name.id_for_label }}">Chat Name:</label>
+                        {{ new_chat_form.name }}
+                    </div>
+                    <div id="form-errors" style="color: red;"></div>  <!-- Para mostrar errores del formulario -->
+                    <button type="submit" class="btn btn-success" name="create_chat">Create Chat</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para mostrar miembros -->
+<div class="modal fade" id="membersModal" tabindex="-1" role="dialog" aria-labelledby="membersModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="membersModalLabel">Group Members</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Lista de miembros se llenará aquí -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ... resto del código JavaScript ... -->
+
+
+{{ form.media }}<!-- Incluir jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Incluir Bootstrap JS -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<!-- Incluir Select2 CSS y JS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
+<script>
+ var currentChatGroupId = null;
+
+ $(document).ready(function() {
+    // Inicializar Select2 para el campo de búsqueda de usuarios.
+    $('#id_users').select2({
+        placeholder: 'Type to search users...',
+        minimumInputLength: 1,
+        ajax: {
+            url: '/user-autocomplete/',
+            dataType: 'json',
+            delay: 250,
+            processResults: function (data) {
+                return {
+                    results: data.results.map(function (item) {
+                        return {
+                            id: item.id,
+                            text: item.text
+                        };
+                    })
+                };
+            }
+        }
+    });
+
+    // Función para verificar el número de usuarios seleccionados y ajustar el campo de nombre
+    function checkAndToggleNameField() {
+        var numSelectedUsers = $('#id_users').val().length;
+        var nameField = $('#id_name');
+
+        if (numSelectedUsers >= 2) { // Incluyendo al usuario actual
+            nameField.prop('disabled', false);
+            nameField.prop('required', true); // Hacer el campo obligatorio
+        } else {
+            nameField.prop('disabled', true);
+            nameField.val(''); // Limpiar el campo de nombre
+            nameField.prop('required', false);
+        }
+    }
+
+    // Monitorear cambios en el campo de usuarios y ajustar el campo de nombre en consecuencia
+    $('#id_users').on('change', function() {
+        checkAndToggleNameField();
+    });
+
+    // Verificar el estado del campo de nombre al cargar la página
+    checkAndToggleNameField();
+
+    // Manejar el envío del formulario para crear un nuevo chat.
+    $('#new-chat-form').submit(function(e) {
+    e.preventDefault();
+    var formData = $(this).serialize();
+
+    $.ajax({
+        url: '{% url "create_chat" %}',
+        type: 'post',
+        data: formData,
+        success: function(response) {
+            if (response.status === 'success') {
+                // Cierra el modal y agrega el nuevo chat a la lista.
+                $('#newChatModal').modal('hide');
+                var newChat = $('<button/>', {
+    'class': 'chat-list-item',
+    'type': 'button',
+    'onclick': 'openChat(' + response.chat_group_id + ')',
+    'data-chat-group-id': response.chat_group_id,
+    'text': response.chat_group_name
+}).css({
+    'width': '100%',
+    'height': '50px',
+    'text-align': 'left',
+    'padding-left': '10px',
+    'border': 'none',
+    'background-color': 'rgb(39, 39, 39)',
+    'color': 'white',
+    'border-bottom': '1px solid white'
+}).hover(
+    function() {
+        // Al pasar el cursor
+        $(this).css({
+            'background-color': 'white',
+            'color': 'rgb(39, 39, 39)'
+        });
+    }, function() {
+        // Al quitar el cursor
+        if (!$(this).hasClass('chat-active')) {
+            $(this).css({
+                'background-color': 'rgb(39, 39, 39)',
+                'color': 'white'
+            });
+        }
+    }
+).click(function() {
+    // Al hacer clic en el chat, se agrega la clase 'chat-active'
+    $('.chat-list-item').removeClass('chat-active');
+    $(this).addClass('chat-active').css({
+        'background-color': 'white',
+        'color': 'rgb(39, 39, 39)'
+    });
+});
+
+
+                $('.chat-list-item').first().before(newChat);
+
+                // Limpia el formulario.
+                $('#new-chat-form').trigger('reset');
+                $('#id_users').val(null).trigger('change');
+            }
+        },
+        error: function(xhr) {
+            $('#form-errors').html(xhr.responseText);
+        }
+    });
+});
+
+    // Obtener el chat_group_id de la URL y abrir el chat correspondiente
+    if (!currentChatGroupId) {
+        // Si no hay un chat seleccionado, vacía el encabezado del chat
+        $('.chat-header span').text('');
+    } else {
+        // Si hay un chat seleccionado, realiza la lógica necesaria para cargar el nombre del chat
+        openChat(currentChatGroupId);
+    }
+
+    // ... el resto de tu código ...
+});
+// Función para abrir un chat y cargar sus mensajes.
+function openChat(chatGroupId) {
+    currentChatGroupId = chatGroupId;
+    localStorage.setItem('lastChatGroupId', chatGroupId);
+    $('.chat-list-item').removeClass('chat-active');
+    var activeChatItem = $('.chat-list-item[data-chat-group-id="' + chatGroupId + '"]');
+    activeChatItem.addClass('chat-active').removeClass('unread'); // Eliminar la clase 'unread' si está presente
+
+    // Hacer una llamada AJAX para marcar los mensajes como leídos en este chat
+    $.ajax({
+        url: '/mark-messages-as-read/' + chatGroupId + '/',
+        method: 'POST',
+        data: {
+            'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+        },
+        success: function(response) {
+            console.log('Mensajes marcados como leídos.');
+        },
+        error: function(error) {
+            console.error('Error al marcar mensajes como leídos:', error);
+        }
+    });
+
+    var chatName = activeChatItem.text();
+    var chatHeader = $('.chat-header span');
+    if (chatHeader.length) {
+        chatHeader.text(chatName);
+    }
+
+    updateDropdownMenuData(chatGroupId);
+
+    // Cargar mensajes
+    $.ajax({
+        url: '/get-chat-messages/' + chatGroupId + '/',
+        success: function(response) {
+            var messagesArea = $('.chat-messages');
+            messagesArea.empty();
+
+            $.each(response.messages, function(index, message) {
+                var isTwoPersonChat = $('#chatHeader').data('is-two-person-chat');
+                var formattedTime = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                var senderInfo = !isTwoPersonChat ? message.sender__username + ': ' : '';
+                var messageDiv = $('<div/>', {
+                    'class': 'message ' + (message.sender__username === "{{ request.user.username }}" ? 'right' : 'left')
+                });
+                var messageBubble = $('<div/>', {
+                    'class': 'message-bubble'
+                });
+                var messageText = $('<p/>').html(senderInfo + message.text + '<br><span class="timestamp" style="color: black; font-size: 0.8em;">' + formattedTime + '</span>');
+                messageBubble.append(messageText);
+                messageDiv.append(messageBubble);
+                messagesArea.append(messageDiv);
+            });
+
+            setTimeout(function() {
+                messagesArea.scrollTop(messagesArea.prop('scrollHeight'));
+            }, 0);
+        },
+        error: function(error) {
+            console.log('Error al cargar mensajes:', error);
+        }
+    });
+}
+
+function updateDropdownMenuData(chatGroupId) {
+    $.ajax({
+        url: '/get-chat-group-info/' + chatGroupId + '/',
+        success: function(response) {
+            var dropdownMenu = document.getElementById("dropdown-menu");
+            var dropdownButton = dropdownMenu.querySelector("button");
+
+            dropdownMenu.setAttribute('data-chat-group-count', response.member_count);
+            if (response.is_two_person_chat) {
+                dropdownButton.textContent = 'Delete';
+            } else {
+                dropdownButton.textContent = 'Leave';
+            }
+        },
+        error: function(error) {
+            console.error('Error al obtener información del grupo de chat:', error);
+        }
+    });
+}
+
+document.getElementById('messageText').addEventListener('keydown', function(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+    }
+});
+
+
+
+// Función para enviar un mensaje nuevo.
+function sendMessage() {
+    var text = document.getElementById('messageText').value;
+    if (text.trim() && currentChatGroupId !== null) {
+        // Envía el mensaje al servidor y lo añade al chat actual.
+        $.ajax({
+            url: '/send-message/' + currentChatGroupId + '/',
+            method: 'POST',
+            data: {
+                'text': text,
+                'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+            },
+            success: function(response) {
+                if (response.status === 'success') {
+                    // Convertir la marca de tiempo a un formato legible
+                    var formattedTime = new Date(response.message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+                    // Añadir el mensaje al área de mensajes
+                    var messagesArea = document.querySelector('.chat-messages');
+                    var isTwoPersonChat = $('.chat-header').data('is-two-person-chat');
+                    var senderAndTimeInfo = !isTwoPersonChat ? "{{ request.user.username }}" + ' - ' + formattedTime : formattedTime;
+
+                    var messageDiv = document.createElement('div');
+                    messageDiv.className = 'message right';
+
+                    var messageContentDiv = document.createElement('div'); // Contenedor para la burbuja y la info
+                    messageContentDiv.className = 'message-content';
+
+                    var messageBubble = document.createElement('div');
+                    messageBubble.className = 'message-bubble';
+                    var messageText = document.createElement('p');
+                    messageText.innerHTML = response.message.text;
+                    messageBubble.appendChild(messageText);
+                    messageContentDiv.appendChild(messageBubble);
+
+                    var senderTimeDiv = document.createElement('div');
+                    senderTimeDiv.innerHTML = senderAndTimeInfo;
+                    senderTimeDiv.className = 'sender-time-info';
+                    messageContentDiv.appendChild(senderTimeDiv);
+
+                    messageDiv.appendChild(messageContentDiv);
+                    messagesArea.appendChild(messageDiv);
+
+
+                    // Desplazar automáticamente al último mensaje
+                    messagesArea.scrollTop = messagesArea.scrollHeight;
+
+                    // Limpiar el área de texto
+                    document.getElementById('messageText').value = '';
+
+                    // Mover el chat a la parte superior
+                    moveChatToTop(currentChatGroupId);
+                    localStorage.setItem('lastChatGroupId', currentChatGroupId);
+                } else {
+                    // Manejar el caso de respuesta no exitosa si es necesario
+                }
+            },
+            error: function(error) {
+                console.log('Error al enviar mensaje:', error);
+            }
+        });
+    }
+}
+
+
+function moveChatToTop(chatGroupId) {
+    // Encuentra el elemento del chat en la barra lateral
+    var chatListItem = document.querySelector('.chat-list-item[data-chat-group-id="' + chatGroupId + '"]');
+    if (chatListItem) {
+        // Encuentra el botón "Write a Message"
+        var writeMessageButton = document.querySelector('.write-message-btn');
+        // Inserta el chat justo debajo del botón "Write a Message"
+        writeMessageButton.parentNode.insertBefore(chatListItem, writeMessageButton.nextSibling);
+    }
+}
+
+// Función para actualizar la barra superior del chat
+
+
+function scrollChatToBottom(messagesArea) {
+    // Verifica si el usuario está cerca del final del área de mensajes
+    if (messagesArea.scrollHeight - messagesArea.scrollTop - messagesArea.clientHeight < 50) {
+        messagesArea.scrollTop = messagesArea.scrollHeight;
+    }
+}
+
+
+function reloadMessages() {
+    if (currentChatGroupId !== null) {
+        $.ajax({
+            url: '/get-chat-messages/' + currentChatGroupId + '/',
+            success: function(response) {
+                var messagesArea = document.querySelector('.chat-messages');
+                messagesArea.innerHTML = '';
+                var isTwoPersonChat = $('.chat-header').data('is-two-person-chat');
+
+                response.messages.forEach(function(message) {
+                    var formattedTime = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                    var senderAndTimeInfo = !isTwoPersonChat ? message.sender__username + ' - ' + formattedTime : formattedTime;
+
+                    var messageDiv = document.createElement('div');
+                    messageDiv.className = 'message ' + (message.sender__username === "{{ request.user.username }}" ? 'right' : 'left');
+                    
+                    var messageContentDiv = document.createElement('div'); // Contenedor para la burbuja y la info
+                    messageContentDiv.className = 'message-content';
+
+                    var messageBubble = document.createElement('div');
+                    messageBubble.className = 'message-bubble';
+                    var messageText = document.createElement('p');
+                    messageText.innerHTML = message.text;
+                    messageBubble.appendChild(messageText);
+                    messageContentDiv.appendChild(messageBubble);
+
+                    var senderTimeDiv = document.createElement('div');
+                    senderTimeDiv.innerHTML = senderAndTimeInfo;
+                    senderTimeDiv.className = 'sender-time-info';
+                    messageContentDiv.appendChild(senderTimeDiv);
+
+                    messageDiv.appendChild(messageContentDiv);
+                    messagesArea.appendChild(messageDiv);
+                });
+                scrollChatToBottom(messagesArea);
+            },
+            error: function(error) {
+                console.log('Error al cargar mensajes:', error);
+            }
+        });
+    }
+}
+
+
+
+setInterval(reloadMessages, 1000);
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function handleChatAction() {
+    var csrfToken = getCookie('csrftoken');
+    var dropdownMenu = document.getElementById("dropdown-menu");
+    var chatGroupId = currentChatGroupId; // Asegúrate de que esta variable contiene el ID del chat actual
+
+    $.ajax({
+        url: '/chat-action/' + chatGroupId + '/',
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken // Incluye el token CSRF en la cabecera
+        },
+        success: function(response) {
+            if (response.status === 'success') {
+                console.log("Chat", response.action);
+
+                // Eliminar el chat de la lista en la barra lateral
+                var chatListItem = document.querySelector('.chat-list-item[data-chat-group-id="' + chatGroupId + '"]');
+                if (chatListItem) {
+                    chatListItem.remove();
+                }
+                dropdownMenu.style.display = 'none';
+                var nextChatListItem = document.querySelector('.chat-list-item');
+                if (nextChatListItem) {
+                    var nextChatGroupId = nextChatListItem.getAttribute('data-chat-group-id');
+                    openChat(nextChatGroupId);
+                } else {
+                    // Manejar el caso en el que no haya más chats disponibles
+                    console.log("No hay más chats disponibles");
+                }
+
+                // Si necesitas más actualizaciones en la UI, agrégalas aquí
+                // Por ejemplo, podrías querer mostrar un mensaje o redirigir al usuario
+            }
+        },
+        error: function(error) {
+            console.log('Error al realizar la acción en el chat:', error);
+        }
+    });
+}
+
+
+
+function toggleDropdownMenu() {
+    var dropdownMenu = document.getElementById("dropdown-menu");
+    dropdownMenu.style.display = dropdownMenu.style.display === "none" ? "block" : "none";
+
+    // Agrega el controlador para cerrar el menú si se hace clic fuera
+    document.addEventListener('click', function(event) {
+        var isClickInside = dropdownMenu.contains(event.target) || event.target.classList.contains('fa-bars');
+        if (!isClickInside) {
+            dropdownMenu.style.display = 'none';
+        }
+    });
+}
+
+function closeDropdownMenu() {
+    var dropdownMenu = document.getElementById("dropdown-menu");
+    if (dropdownMenu) {
+        dropdownMenu.style.display = "none";
+    }
+}
+function openMembersModal() {
+    var chatGroupId = currentChatGroupId;
+
+    $.ajax({
+        url: '/get-chat-group-members/' + chatGroupId,
+        success: function(response) {
+            console.log("Members response:", response);  // Agregar esta línea
+            var membersList = response.members.map(function(member) {
+                return '<li><a href="' + member.profile_url + '">' + member.username + '</a></li>';
+            }).join('');
+            $('#membersModal .modal-body').html('<ul class="list-unstyled">' + membersList + '</ul>');
+            $('#membersModal').modal('show');
+        },
+        error: function(error) {
+            console.log('Error al obtener miembros del grupo:', error);
+        }
+    });
+}
+</script>
+        
+
+
+<style>
+
+
+
+/*.............................................
+
+
+    /* Estilos para el modal y el campo de autocompletado */
+    .modal-dialog {
+        max-width: 600px; /* Ajusta esto según tus necesidades */
+    }
+
+    #new-chat-form .select2 {
+        width: 100% !important; /* Esto hará que el campo de Select2 ocupe todo el ancho disponible */
+    }
+
+/* chat.css */
+.chat-container {
+    display: flex;
+    height: 100vh;
+}
+.chat-sidebar {
+    width: 300px; /* Ancho fijo */
+    flex: 0 0 300px; 
+    background-color: rgb(39, 39, 39); /* Mismo color que chat-input */
+    padding: 20px;
+    overflow-y: auto;
+    border-right: 1px solid white; /* Borde blanco a la derecha */
+}
+
+.chat-sidebar button {
+    width: 100%; /* Hace que cada botón ocupe toda la fila */
+    height: 50px; /* Altura fija para cada botón */
+    text-align: left; /* Alinea el texto a la izquierda */
+    padding-left: 10px; /* Espacio a la izquierda del texto */
+    border: none; /* Sin borde */
+    background-color: rgb(39, 39, 39); /* Mismo color que chat-input */
+    color: white; /* Texto blanco */
+    border-bottom: 1px solid white; /* Borde blanco en la parte inferior */
+}
+
+.chat-list-item.unread {
+    background-color: rgb(155, 155, 155); /* un color más oscuro o diferente */
+}
+
+.chat-sidebar .write-message-btn {
+    margin-bottom: 40px;
+    background-color: #007bff; /* Color de fondo azul */
+    color: white; /* Texto blanco */
+    text-align: center; /* Texto centrado */
+    border: none; /* Sin borde */
+}
+
+.chat-sidebar button:hover {
+    background-color: white; /* Color de fondo blanco al pasar el ratón por encima */
+    color: rgb(39, 39, 39); /* Texto con el color del background */
+}
+
+.chat-sidebar .chat-list-item.chat-active,
+.chat-sidebar .chat-list-item:active {
+    background-color: white; /* Color de fondo blanco para el chat activo o seleccionado */
+    color: rgb(39, 39, 39); /* Texto con el color del background */
+}
+
+.no-messages {
+    text-align: center;
+    padding: 10px;
+}
+
+.new-message-btn {
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.chat-list-item {
+    width: 100%; /* Ocupa toda la fila */
+    height: 50px; /* Altura fija */
+    text-align: left; /* Alinea el texto a la izquierda */
+    padding: 10px 10px; /* Ajusta el espaciado como desees */
+    border: none; /* Opcional: quita el borde de los botones */
+    background-color: #545454; /* Color de fondo */
+    border-bottom: 1px solid #e0e0e0; /* Línea divisoria */
+    display: flex; /* Usa flexbox para alinear el contenido */
+    align-items: center; /* Centra verticalmente el contenido */
+    justify-content: space-between; /* Distribuye el espacio */
+}
+
+.no-messages {
+    text-align: center;
+    padding: 20px;
+}
+
+.chat-main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+
+.message-bubble {
+    padding: 10px;
+    padding-bottom: 0px; 
+    border-radius: 20px;
+    display: inline-block;
+    max-width: 200%; /* Aumenta el ancho máximo de la burbuja */
+    min-width: 100px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    margin-bottom: 10px; /* Reduce el margen debajo de la burbuja */
+}
+
+
+.message.right .message-bubble {
+    background-color: #007bff; /* Color verde para mensajes del usuario actual */
+}
+
+.message.left .message-bubble {
+    background-color: #e0e0e0; /* Color gris para mensajes de otros usuarios */
+    margin-right: auto; /* Alinea la burbuja a la izquierda */
+    margin-left: 0; /* Asegura que la burbuja empiece desde el lado izquierdo */
+}
+
+
+/* Estilos para el contenedor de los mensajes */
+.message {
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: 10px;
+    width: 100%;
+}
+
+.message.left {
+    justify-content: flex-start; /* Alinea a la izquierda los mensajes de otros usuarios */
+}
+
+.message.right {
+    justify-content: flex-end; /* Alinea a la derecha los mensajes del usuario actual */
+}
+
+/* Estilos para el área de mensajes */
+.chat-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 20px;
+    width: 100%;
+}
+
+
+.chat-input {
+    padding: 20px;
+    background-color: #f5f5f5;
+    display: flex;
+}
+
+.chat-input textarea {
+    flex-grow: 1;
+    padding: 10px;
+    margin-right: 10px;
+}
+
+.send-message-btn {
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.sender-time-info {
+    color: white;
+    font-size: 0.7em;
+    margin-top: -5px; /* Ajusta según sea necesario */
+    margin-bottom: 10px; /* Espacio antes del próximo mensaje */
+    /* Espacio entre la burbuja y la información */
+}
+
+.message.left .sender-time-info {
+    transform: translateX(-11px); /* Mueve el texto 3px hacia la izquierda */
+}
+    
+
+.message-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* Alineación a la derecha para mensajes del usuario actual */
+    max-width: 80%; /* Ajusta según sea necesario */
+}
+
+
+
+
+.dropdown-menu {
+    position: absolute;
+    top: 17.5%; /* Posición debajo del ícono */
+    left: 93.5%;
+    background-color: rgb(39, 39, 39); /* Fondo oscuro */
+    min-width: 100px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    padding: 12px 16px;
+    z-index: 1;
+}
+
+.dropdown-menu button {
+    background-color: rgb(39, 39, 39); /* Fondo del botón */
+    color: white; /* Color del texto */
+    border: none; /* Eliminar borde */
+    padding: 5px 10px; /* Ajuste de padding, opcional */
+    text-align: center; /* Alinear texto */
+    text-decoration: none; /* Eliminar decoración del texto */
+    display: inline-block; /* Tipo de display */
+    font-size: 16px; /* Tamaño de la fuente, ajustable según necesidad */
+    margin: 4px 2px; /* Margen alrededor del botón */
+    cursor: pointer; /* Cursor tipo puntero */
+}
+
+
+/* Estilo general del modal */
+#membersModal .modal-content {
+    background-color: rgb(39, 39, 39); /* Color de fondo */
+    color: white; /* Color del texto */
+    border-color: white; /* Color del borde */
+}
+
+/* Estilo del título y botón de cerrar en el encabezado del modal */
+#membersModal .modal-header {
+    border-bottom: 1px solid white; /* Borde blanco debajo del encabezado */
+}
+
+/* Estilo del botón de cerrar */
+#membersModal .close {
+    color: white; /* Color del botón de cerrar */
+}
+
+/* Estilo de los enlaces de los miembros en el cuerpo del modal */
+#membersModal .modal-body a {
+    color: white; /* Color del texto de los enlaces */
+}
+
+</style>
+
 {% endblock %}
+
+

@@ -1,0 +1,286 @@
+{% extends 'base_user.html' %}
+{% load custom_filters %}
+{% load static %}
+
+{% block content %}
+
+
+<style>
+
+
+    /* Estilos de la vista */
+    .trial-edit-container {
+        background-color: rgb(39, 39, 39);
+        color: white;
+        border: 1px solid white;
+        width: 800px;
+        margin: auto;
+        padding: 20px;
+        border-radius: 5px;
+        text-align: center; /* Centrar el título y el botón */
+    }
+
+    .trial-edit-container h1 {
+        margin-bottom: 20px; /* Espacio debajo del título */
+    }
+
+    .form-content {
+        text-align: left; /* Alinear el contenido del formulario a la izquierda */
+    }
+
+    .form-content div {
+        margin-bottom: 15px; /* Espacio entre los campos */
+    }
+
+    .form-content label {
+        display: block; /* Asegura que las etiquetas estén sobre los campos */
+    }
+
+    .form-content select, .form-content input[type='text'], .form-content textarea {
+        width: 60%;  /* Ancho para cubrir el contenedor */
+        color: black; /* Color del texto dentro de los campos */
+    }
+
+    .trial-edit-container textarea {
+        width: 760px;  /* Ancho específico para los textareas */
+        height: 150px; /* Altura ajustable según tus necesidades */
+        color: black; /* Color del texto dentro del textarea */
+        background-color: white; /* Fondo blanco para mayor legibilidad */
+        border: 1px solid #ccc; /* Borde sutil para el textarea */
+        border-radius: 4px; /* Bordes redondeados */
+        padding: 10px; /* Espaciado interior */
+        margin-top: 10px; /* Espacio encima del textarea */
+    }
+
+.preview-image {
+        max-width: 100px; /* Ajustar según sea necesario */
+        max-height: 100px; /* Ajustar según sea necesario */
+        margin: 10px;
+    }
+
+input[type='number']::-webkit-inner-spin-button, 
+    input[type='number']::-webkit-outer-spin-button { 
+        -webkit-appearance: none; 
+        margin: 0; 
+    }
+
+    
+.custom-modal {
+         
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: none;
+        background-color: white;
+        color: black;
+        padding: 20px;
+        border: 1px solid black;
+        z-index: 1050; /* Para asegurarse de que esté por encima de otros elementos */
+    }
+
+    body {
+        color: white;  /* Esto aplicará el color blanco a todo el texto en el cuerpo de la página */
+    }
+
+    #createTrialButton {
+        display: block; 
+        margin: 10px auto; 
+        padding: 10px 20px;
+        background-color:  rgb(234, 216, 127); 
+        color: #000000; 
+        border: 1px solid white; 
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    #createTrialButton:hover {
+        background-color: rgb(234, 127, 127); 
+    }
+
+    /* Estilos para las opciones de autocompletado */
+        /* Estilos para las opciones de autocompletado de Select2 */
+        .select2-results__option {
+        color: black; /* Cambia el color del texto a negro */
+    }
+
+    /* Si también necesitas cambiar el color del texto en el campo de selección */
+    .select2-selection__rendered {
+        color: black; /* Cambia el color del texto seleccionado a negro */
+    }
+
+</style>
+<br>
+<br>
+
+
+<div class="trial-edit-container">
+    <h1>Create your trial</h1>
+    <br>
+    <form id="trialForm" method="post" enctype="multipart/form-data" class="form-content">
+        {% csrf_token %}
+        <div>
+            <label for="id_title">Title:</label>
+            {{ form.title }}
+        </div>
+        <div>
+            <label for="{{ form.administrators.auto_id }}">Administrators:</label>
+            {{ form.administrators }}
+        </div>
+        <div>
+            <label for="{{ form.communities.auto_id }}">Communities:</label>
+            {{ form.communities }}
+        </div>
+        <div>
+            <label for="{{ form.medical_supervisor.auto_id }}">Medical Supervisor:</label>
+            {{ form.medical_supervisor }}
+        </div>
+        <div>
+            <label for="{{ form.description.auto_id }}">Description:</label>
+            {{ form.description }}
+        </div>
+
+        <div>
+            <label for="file-input">Upload Media Files:</label>
+            <input type="file" id="file-input" name="media_file">
+        </div>
+        <div id="file-preview"></div>
+
+        <div>
+            <label for="{{ form.participation_criteria.auto_id }}">Participation Criteria:</label>
+            {{ form.participation_criteria }}
+        </div>
+
+        <div>
+            <label for="{{ form.include_crowdfunding.auto_id }}">Do you want to Crowdfund this trial?</label>
+            {{ form.include_crowdfunding }}
+        </div>
+
+        <div id="crowdfundingGoal" style="display:none;">
+            <label for="{{ form.goal.auto_id }}">Goal ($):</label>
+            {{ form.goal }}
+            <p>Please enter the amount in USD (United States Dollars) without including the dollar sign ($) or commas. Use a decimal point to separate dollars and cents.<br>
+            For example: If your goal is twenty-five thousand dollars and fifty cents, you should enter it as 25000.50</p>
+        </div>
+
+        <br>
+
+        <button type="button" id="createTrialButton">Create Trial</button>
+    </form>
+</div> <!-- Asegúrate de cerrar el contenedor aquí -->
+
+<!-- Añade los espacios aquí, después del cierre del contenedor -->
+<br>
+<br>
+    
+
+    
+
+    </form>
+    
+    <div class="custom-modal" id="crowdfundingModal" style="display: none;">
+        <div class="modal-content">
+            <!-- Cabecera de la ventana modal -->
+            <div class="modal-header">
+                <h5 class="modal-title">Crowdfunding Commitment</h5>
+                <button type="button" class="close" onclick="$('#crowdfundingModal, .custom-modal-backdrop').hide();">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+    
+            <!-- Cuerpo de la ventana modal -->
+            <div class="modal-body">
+                <p>If you want to crowdfund this trial, you have to commit to open source the results and share them publicly once the trial is over.</p>
+            </div>
+    
+            <!-- Pie de página de la ventana modal -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="$('#crowdfundingModal, .custom-modal-backdrop').hide();">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmCrowdfunding">Accept</button>
+            </div>
+        </div>
+    </div>
+    
+
+{{ form.media }}
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/autolinker/3.14.3/Autolinker.min.js"></script>
+
+
+<script>
+    $(document).ready(function() {
+        // Evento para manejar cambios en el checkbox de crowdfunding
+        document.getElementById('id_include_crowdfunding').addEventListener('change', function() {
+            var crowdfundingGoal = document.getElementById('crowdfundingGoal');
+
+            if (this.checked) {
+                // Mostrar el campo Goal
+                crowdfundingGoal.style.display = 'block';
+            } else {
+                // Ocultar el campo Goal
+                crowdfundingGoal.style.display = 'none';
+            }
+        });
+    });
+</script>
+
+<script>
+    $(document).ready(function() {
+        $('#createTrialButton').click(function() {
+            var includeCrowdfunding = $('#id_include_crowdfunding').is(':checked');
+            if (includeCrowdfunding) {
+                // Mostrar la ventana modal
+                $('#crowdfundingModal').show();
+            } else {
+                // Enviar el formulario directamente si no se requiere crowdfunding
+                $('#trialForm').submit();
+            }
+        });
+
+        $('#confirmCrowdfunding').click(function() {
+            // Enviar el formulario cuando se haga clic en "Accept"
+            $('#trialForm').submit();
+        });
+
+        $('.close, .btn-secondary').click(function() {
+            // Ocultar la ventana modal cuando se haga clic en "Cancel" o en el botón de cerrar
+            $('#crowdfundingModal').hide();
+        });
+    });
+</script>
+
+<script>
+    document.getElementById('file-input').addEventListener('change', function(e) {
+        const filePreview = document.getElementById('file-preview');
+        filePreview.innerHTML = '';  // Limpiar la vista previa anterior
+    
+        const files = e.target.files;
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const reader = new FileReader();
+    
+            reader.onload = function(e) {
+                if (file.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.alt = file.name;
+                    img.classList.add('preview-image');
+                    filePreview.appendChild(img);
+                } else {
+                    // Si no es una imagen, mostrar el nombre del archivo
+                    const div = document.createElement('div');
+                    div.textContent = file.name;
+                    filePreview.appendChild(div);
+                }
+            };
+    
+            reader.readAsDataURL(file);
+        }
+    });
+</script>
+
+
+
+
+{% endblock %}

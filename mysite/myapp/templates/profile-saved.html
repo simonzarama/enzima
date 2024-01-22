@@ -6,7 +6,10 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 {% block content %}
-<h2>Your saved content</h2>
+<br>
+<br>
+<h2 class="estilo-titulo">Saved content</h2>
+
 <div class="centrar-contenido">
     {% if saved_items %}
         {% for item in saved_items %}
@@ -38,13 +41,14 @@
                     <div class="post-separator"></div>
                     <div class="post-actions">
                         <p class="comment-count">{{ post.comments.count }} Comment{{ post.comments.count|pluralize }}</p>
-                        <a href="#" data-post-id="{{ post.id }}" class="like-button post-like">
+                        <button data-post-id="{{ post.id }}" class="like-button save-button">
                             {% if post.is_liked %}
                                 Unlike
                             {% else %}
                                 Like
                             {% endif %}
-                        </a> 
+                        </button>
+                        
                         <span id="like-count-{{ post.id }}" class="like-count">{{ post.likes_count }} Like{{ post.likes_count|pluralize }}</span>
                         <button data-content-type="{{ item.content_type.model }}" data-content-id="{{ item.object_id }}" class="save-button post-save">
                             Unsave
@@ -69,13 +73,14 @@
                     <div class="campaign-actions">
                         <div class="action-items"> <!-- Contenedor para alinear elementos de acción -->
                             <p class="comment-count">{{ campaign.comments.count }} Comment{{ campaign.comments.count|pluralize }}</p>
-                            <a href="#" data-campaign-id="{{ campaign.id }}" class="like-button campaign-like">
-                                {% if campaign.is_liked %}
+                            <button data-post-id="{{ post.id }}" class="like-button save-button">
+                                {% if post.is_liked %}
                                     Unlike
                                 {% else %}
                                     Like
                                 {% endif %}
-                            </a>
+                            </button>
+                            
                             <span class="like-count">{{ campaign.likes_count }} Like{{ campaign.likes_count|pluralize }}</span>
                             <button data-content-type="{{ item.content_type.model }}" data-content-id="{{ item.object_id }}" class="save-button campaign-save">
                                 Unsave
@@ -101,13 +106,14 @@
                     <div class="resource-actions">
                         <div class="action-items"> <!-- Contenedor para alinear elementos de acción -->
                             <p class="comment-count">{{ resource.comments.count }} Comment{{ resource.comments.count|pluralize }}</p>
-                            <a href="#" data-resource-id="{{ resource.id }}" class="like-button resource-like">
-                                {% if resource.is_liked %}
+                            <button data-post-id="{{ post.id }}" class="like-button save-button">
+                                {% if post.is_liked %}
                                     Unlike
                                 {% else %}
                                     Like
                                 {% endif %}
-                            </a>
+                            </button>
+                            
                             <span class="like-count">{{ resource.likes_count }} Like{{ resource.likes_count|pluralize }}</span>
                             <button data-content-type="{{ item.content_type.model }}" data-content-id="{{ item.object_id }}" class="save-button resource-save">
                                 Unsave
@@ -121,79 +127,295 @@
         {% else %}
             <p>{{ profile_user.username }} hasn't saved any content yet.</p>
         {% endif %}
+        {% if saved_trials %}
+        {% for item in saved_trials %}
+            {% with trial=item.content_object %}
+                <article class="hc-post">
+                    <!-- Comunidad -->
+                    {% if trial.communities.all %}
+                        <div class="hc-author-info">
+                            Communities:
+                            {% for community in trial.communities.all %}
+                                <a href="{% url 'view_community' community.name %}" class="hc-link-blanco">{{ community.name }}</a>
+                                {% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Contenido del Trial -->
+                    <div class="hc-content-box">
+                        <a href="{% url 'view_trial_detail' trial.id %}" class="hc-post-link">
+                            <h3 id="hc-trial-title-{{ trial.id }}">{{ trial.title }}</h3>
+                            <p>{{ trial.description|truncatechars:200 }}</p>
+
+                            <!-- Archivo multimedia -->
+                            {% if trial.media_file %}
+                                {% if trial.media_file.url|lower|endswith:".mp4" or trial.media_file.url|lower|endswith:".webm" %}
+                                    <video controls id="hc-trial-file-{{ trial.id }}">
+                                        <source src="{{ trial.media_file.url }}" type="video/mp4">
+                                        Your browser does not support the video tag.
+                                    </video>
+                                {% else %}
+                                    <img src="{{ trial.media_file.url }}" alt="Media file" class="hc-media-thumbnail" id="hc-trial-file-{{ trial.id }}">
+                                {% endif %}
+                            {% endif %}
+                        </a>
+                    </div>
+
+                    <!-- Botones de acción -->
+                    <div class="hc-post-actions">
+                        <p class="hc-comment-count">{{ trial.comments.count }} Comment{{ trial.comments.count|pluralize }}</p>
+                        <button onclick="window.location.href='{% url 'view_trial_detail' trial.id %}';" class="save-button hc-comment-btn">
+                            Comments
+                        </button>
+                        <button id="shareButton" data-id="{{ trial.id }}" class="save-button">Share</button>
+                        <button data-content-type="{{ item.content_type.model }}" data-content-id="{{ item.object_id }}" class="save-button trial-save"> Unsave</button>
+                        <button onclick="location.href='{% url 'donate_view' trial.id %}'" class="hc-donate-btn">Donate</button>
+
+                    </div>
+                </article>
+
+                <br><br>
+            {% endwith %}
+        {% endfor %}
+    {% else %}
+        <p>No saved trials available.</p>
+    {% endif %}
     </div>
    
 
 
 
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    document.querySelectorAll('.custom-link').forEach(function(span) {
-        span.addEventListener('click', function() {
-            window.location.href = span.getAttribute('data-url');
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("DOM completamente cargado y analizado.");
+            let buttons = document.querySelectorAll('.community-button');
+            console.log(`Encontrados ${buttons.length} botones de la comunidad.`);
+            let highlight = document.querySelector('.highlight-line');
+            
+            buttons.forEach(function(button, index) {
+                console.log(`Añadiendo manejador de eventos al botón ${index} (${button.textContent.trim()})`);
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+            
+                    let buttonRect = button.getBoundingClientRect();
+                    let containerRect = highlight.parentElement.getBoundingClientRect();
+                    highlight.style.left = (buttonRect.left - containerRect.left + window.pageXOffset) + "px";
+                    console.log(`Botón ${button.dataset.btn} clickeado. Resaltado movido.`);
+            
+                    if (button.dataset.btn === 'saved') {
+                        console.log("Haciendo llamada AJAX para cargar contenido guardado.");
+                        $.ajax({
+                            url: '{% url "saved_content" username=profile_user.username %}',
+                            method: 'GET',
+                            success: function(data) {
+                                console.log("Contenido guardado cargado exitosamente.");
+                                document.getElementById('saved-results').innerHTML = data;
+                                setUpSaveButtonListeners(); 
+                                showResults('saved-results');
+                            },
+                            error: function(err) {
+                                console.error("Error al cargar el contenido guardado:", err);
+                            }
+                        });
+                    } else {
+                        showResults(button.dataset.btn + '-results');
+                    }
+                });
+            });
+            
+            showResults('posts-results');
+        });
+        
+        function showResults(resultType) {
+            console.log(`Mostrando resultados para: ${resultType}`);
+            let allResults = document.querySelectorAll('.results-container');
+            allResults.forEach(result => result.style.display = 'none');
+            document.getElementById(resultType).style.display = 'block';
+        }
+        
+        function setUpSaveButtonListeners() {
+    const saveButtons = document.querySelectorAll('.save-button');
+    console.log(`Configurando manejadores de eventos para ${saveButtons.length} botones de Unsave.`);
+    
+    if (saveButtons.length === 0) {
+        console.error("No se encontraron botones de Unsave.");
+        return;
+    }
+
+    saveButtons.forEach((button, index) => {
+        console.log(`Configurando botón Unsave ${index}`);
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            let contentType = this.dataset.contentType;
+            let contentId = this.dataset.contentId;
+            console.log(`Botón Unsave clickeado: Tipo de contenido - ${contentType}, ID - ${contentId}`);
+            toggleSavedContent(contentType, contentId, this);
         });
     });
-});
+}
+
+        function toggleSavedContent(contentType, contentId, button) {
+            console.log(`Enviando solicitud AJAX para cambiar estado del contenido: Tipo - ${contentType}, ID - ${contentId}`);
+            var url = `/${contentType}/${contentId}/save/`;
+
+            $.ajax({
+                url: url,
+                method: 'POST',
+                headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                
+                success: function(response) {
+                    console.log('Respuesta del servidor recibida:', response);
+                    if (response.saved === false) {
+    console.log('Contenido no guardado. Actualizando UI.');
+    // Elimina el contenedor del elemento específico
+    if (contentType === 'trial') {
+        button.closest('.hc-post').remove();
+    } else if (contentType === 'resource') {
+        button.closest('.resource-item').remove();
+    } else if (contentType === 'crowdfundingcampaign') {
+        button.closest('.campaign-item').remove();
+    } else if (contentType === 'post') {
+        button.closest('.post-item').remove();
+    }
+} else {
+    console.log('Contenido guardado.');
+}
+
+                },
+                error: function(err) {
+                    console.error('Error al cambiar el estado de guardado del contenido:', err);
+                }
+            });
+        }
+    </script>
+    
+
+
+<!-- Botón Compartir (Share) -->
+<script>
+    document.addEventListener('click', function(e) {
+        // Verificamos si el elemento clickeado es el botón 'shareButton'
+        if (e.target.id === 'shareButton') {
+            const trialId = e.target.getAttribute('data-id');
+            const urlToCopy = window.location.origin + '/trials/' + trialId + '/';
+            
+            // Crear un input temporal para copiar el texto
+            const tempInput = document.createElement('input');
+            tempInput.value = urlToCopy;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            // Mostrar un mensaje de confirmación
+            alert('Link copied to clipboard!');
+        }
+    });
 </script>
 
 
 <style>
-.centrar-contenido .post-item .post-actions button,
-.centrar-contenido .campaign-item .campaign-actions button,
-.centrar-contenido .resource-item .resource-actions button,
-.centrar-contenido .post-item .post-actions .like-button,
-.centrar-contenido .campaign-item .campaign-actions .like-button,
-.centrar-contenido .resource-item .resource-actions .like-button {
-    display: inline-block;
-    margin: 0 10px;
-    padding: 10px 20px;
-    background-color: rgb(234, 216, 127);
-    color: #000000;
+
+.estilo-titulo {
+    grid-column: span 3;
+    text-transform: capitalize;
+    text-align: center;
+    padding-bottom: 5px;
+}
+
+/* Estilos Generales */
+.post-item, .campaign-item, .resource-item, .hc-post {
+    background-color: rgb(39, 39, 39);
+    margin: 40px 0;
+    padding: 20px;
+    border-radius: 0px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    width: calc((400px * 2) + 20px);
     border: 1px solid white;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    width: 150px;
-    border-radius: 0;
+    box-sizing: border-box;
 }
 
-.custom-link {
-    color: rgb(255, 255, 255);
-    text-decoration: underline;
-    cursor: pointer;
+.content-container, .hc-content-box {
+    margin-bottom: 15px;
+    border: 1px solid white;
+    padding: 10px;
 }
 
-.post-link, .campaign-link, .resource-link {
-    border-radius: 0;
+.post-link, .campaign-link, .resource-link, .hc-post-link {
+    display: block;
+    width: calc(100% - 10px);
+    margin: 0 auto;
     text-decoration: none;
+    border-radius: 0;
     background-color: #808080;
     color: #1d1d1d;
 }
 
-.post-link:hover, .campaign-link:hover, .resource-link:hover {
+.post-separator, .campaign-separator, .resource-separator, .hc-post-separator {
+    border-bottom: 1px solid white;
+    margin: 10px 0;
+}
+
+.custom-link, .link-blanco {
+    color: white;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.custom-link:hover, .link-blanco:hover {
     text-decoration: none;
 }
 
-.post-item .post-link h3, .campaign-item .campaign-link h3, .resource-item .resource-link h3,
-.post-item .post-link p, .campaign-item .campaign-link p, .resource-item .resource-link p,
-.post-item .post-link img, .campaign-item .campaign-link img, .resource-item .resource-link img {
-    color: #1c1c1c;
-    text-decoration: none;
-    text-align: left;
+/* Botones de Acción */
+.save-button, .like-button, .hc-save-btn, .hc-like-button, .hc-more-options-button, .cancel-button {
+    display: inline-block;
+    padding: 10px 20px;
+    color: rgb(39, 39, 39);
+    border: 1px solid white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    width: 130px;
+    border-radius: 0;
+    text-align: center;
+    margin: 0 10px;
+    background-color: rgb(234, 216, 127);
 }
 
-.post-item .post-link:hover h3, .campaign-item .campaign-link:hover h3, .resource-item .resource-link:hover h3,
-.post-item .post-link:hover p, .campaign-item .campaign-link:hover p, .resource-item .resource-link:hover p,
-.post-item .post-link:hover img, .campaign-item .campaign-link:hover img, .resource-item .resource-link:hover img {
-    color: inherit;
-    text-decoration: none;
+.save-button:hover, .like-button:hover, .hc-save-btn:hover, .hc-like-button:hover, .hc-more-options-button:hover, .cancel-button:hover {
+    background-color: rgb(234, 127, 127);
 }
 
-.post-item .post-link, .campaign-item .campaign-link, .resource-item .resource-link {
-    display: block;
-    width: calc(100% - 10px);
-    margin: 0 auto;
+/* Estilos para Contenedores de Acción */
+.post-actions, .campaign-actions, .resource-actions, .hc-post-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    margin: 25px;
 }
 
+.hc-donate-button {
+    background-color: rgb(97, 171, 128);
+    color: white;
+    padding: 15px;
+    width: 150px;
+    border-radius: 0;
+    transition: background-color 0.3s;
+}
+
+.hc-donate-button:hover {
+    background-color: darkblue;
+}
+
+/* Media Thumbnails */
+.hc-media-thumbnail, .media-thumbnail {
+    max-height: 200px;
+    width: auto;
+}
+
+/* Edit Buttons Container */
 .edit-buttons-container {
     display: flex;
     justify-content: space-between;
@@ -201,171 +423,15 @@ document.addEventListener("DOMContentLoaded", function() {
     padding: 10px;
 }
 
-.post-item .save-button, .campaign-item .save-button, .resource-item .save-button,
-.post-item .like-button, .campaign-item .like-button, .resource-item .like-button {
-    color: white;
-    padding: 10px 20px;
-    background-color: rgb(234, 127, 127);
-    text-decoration: none;
-    border: 1px solid #ffffff;
-    margin-bottom: 2px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
-    width: 150px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Estilos para el contenedor de contenido que incluye título, descripción y medios */
-.content-container {
-    margin-bottom: 15px; /* Ajuste el espaciado según sea necesario */
-    border: 1px solid white;
-    padding: 10px;
-}
-
-/* Estilos para asegurarse de que los botones y contadores estén en la misma línea */
-.campaign-actions .action-items, .resource-actions .action-items {
-    display: flex; /* Utiliza flexbox para alinear elementos horizontalmente */
-    align-items: center; /* Centra los elementos verticalmente */
-    gap: 10px; /* Espacio entre elementos, ajústalo según sea necesario */
-}
-
-/* Si los contadores de comentarios ya tienen una clase definida, ajústalos para que coincidan con los nuevos estilos */
-.comment-count {
-    margin: 0; /* Elimina márgenes por defecto si los hay */
-    flex-shrink: 0; /* Evita que el elemento se encoja */
-}
-
-/* Para los botones y contadores de 'like' y 'save' */
-.like-button, .like-count, .save-button {
-    flex-shrink: 0; /* Evita que estos elementos se encojan */
-}
-
-/* Asegúrate de que los enlaces dentro del contenedor de contenido no ocupen todo el bloque si no es necesario */
-.post-link {
-    display: inline-block; /* O 'inline-flex' si necesitas más control sobre los elementos internos */
-    text-decoration: none; /* Elimina el subrayado de los enlaces, si se prefiere */
-}
-
-/* Puedes necesitar ajustar el estilo de los títulos y descripciones si quieres un formato específico */
-.campaign-title, .resource-title {
-    margin: 0 0 5px 0; /* Ajusta los márgenes según sea necesario */
-    font-size: 1.2em; /* Ajusta el tamaño de fuente según sea necesario */
-}
-
-.campaign-description, .resource-description {
-    margin: 0; /* Elimina los márgenes por defecto */
-    font-size: 1em; /* Ajusta el tamaño de fuente según sea necesario */
-}
-
-
-.post-item .save-button:hover, .campaign-item .save-button:hover, .resource-item .save-button:hover,
-.post-item .like-button:hover, .campaign-item .like-button:hover, .resource-item .like-button:hover {
-    background-color: rgb(234, 127, 127);
-    color: #000000;
-}
-.cancel-button {
-    color: white;
-    background-color: #000000;
-    padding: 10px 20px;
-    text-decoration: none;
-    border: none;
-    border-radius: 25px;
-    border: 1px solid #ffffff;
-    margin-bottom: 2px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
-    width: 100px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.cancel-button:hover {
-    background-color: rgb(255, 255, 255);
-    color: #000000;
-    border: 1px solid #000000;
-}
-
-.btn {
-    color: white;
-    padding: 5px 10px;
-    text-decoration: none;
-    border-radius: 25px;
-    border: 1px solid #ffffff;
-    margin-bottom: 2px;
-}
-
-.btn:hover,
-.btn.selected {
-    background-color: rgb(234, 216, 127);
-    color: #000000;
-    text-decoration: none;
-}
-
-.link-blanco { 
-    color: white;
-    text-decoration: none;
-} 
-
-.link-blanco:hover {
-    color: white;
-    text-decoration: underline;
-}
-
-.preview-image {
-    max-width: 100px;
-}
-
-.centrar-contenido {
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: center;
-    width: 100%;
-    margin-bottom: 20px;
-    margin-top: 20px;
-}
-
-.centrar-contenido .post-item .post-link, 
-.centrar-contenido .campaign-item .campaign-link, 
-.centrar-contenido .resource-item .resource-link {
-    border-radius: 5px;
-    text-align: left;
-}
-
-.centrar-contenido .post-item,
-.centrar-contenido .campaign-item,
-.centrar-contenido .resource-item {
-    background-color: #808080; 
-    padding: 20px;
-    border: 1px solid white; 
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); 
-    width: calc((400px * 2) + 20px);
-    box-sizing: border-box;
-    margin-bottom: 50px;
-}
-
-.centrar-contenido .post-separator,
-.centrar-contenido .campaign-separator,
-.centrar-contenido .resource-separator {
-    border-bottom: 1px solid white;
-    margin: 10px 0;
-}
-
-.centrar-contenido .post-actions,
-.centrar-contenido .campaign-actions,
-.centrar-contenido .resource-actions {
-    position: relative;
-}
-
+/* More Options */
 .more-options-container {
     position: relative;
     display: inline-block;
+}
+
+.hc-author-info {
+    margin-bottom: 1rem; /* Añade un margen inferior de 1 rem */
+    /* Asegúrate de incluir cualquier otro estilo que ya esté aplicado a esta clase */
 }
 
 .options-container {
@@ -402,31 +468,78 @@ document.addEventListener("DOMContentLoaded", function() {
     background-color: rgb(234, 127, 127);
 }
 
-.media-thumbnail {
-    width: 200px;
-    height: auto;
+.campaign-actions .action-items {
+    display: flex;
+    justify-content: space-between; /* Distribuye los elementos uniformemente */
+    align-items: center;
+    width: 100%; /* Asegúrate de que el contenedor ocupe todo el ancho posible */
 }
 
-.edit-post-container {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    padding: 20px;
-    border: 1px solid #ccc;
-    z-index: 1000;
+.hc-donate-btn {
+    background-color: #3c7248; /* Color verde para el botón Donate */
+    color: white;
+    border: 1px solid white;
+    padding: 10px 20px;
+    display: inline-block;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    width: 150px;
+    border-radius: 0;
+    text-align: center;
+    margin: 0 10px;
+}
+
+.hc-donate-btn:hover {
+    background-color: #000000; /* Un verde más oscuro para el hover */
+    color: white
 }
 
 
-.centrar-contenido .post-separator, .centrar-contenido .campaign-separator, .centrar-contenido .resource-separator {
-    border-bottom: 1px solid white;
-    margin: 10px 0;
+.hc-comment-count {
+    margin: 0; /* Remueve cualquier margen adicional */
+    padding: 10px 0; /* Añade padding si es necesario para alinear */
 }
 
-/* ... continue with the rest of the provided styles ... */
-
-
+.hc-post-actions .trial-save,
+.hc-post-actions #shareButton,
+.hc-post-actions .hc-comment-btn {
+    background-color: transparent;
+    border: 1px solid white;
+    color: white;
+    padding: 0 20px;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 0;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    margin: 0 5px;
+    box-sizing: border-box;
+    transition: background-color 0.2s, color 0.2s;
+}
+.hc-post-actions .hc-donate-btn {
+    background-color: rgb(97, 171, 128); /* Color verde */
+    border: 1px solid white;
+    color: white;
+    padding: 0 20px;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 0;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    margin: 0 5px;
+    box-sizing: border-box;
+    transition: background-color 0.2s, color 0.2s;
+}
+.hc-post-actions .trial-save:hover,
+.hc-post-actions #shareButton:hover,
+.hc-post-actions .hc-comment-btn:hover,
+.hc-post-actions .hc-donate-btn:hover {
+    background-color: white; /* Fondo blanco en hover */
+    color: black; /* Texto negro en hover */
+    /* ...otros estilos de hover si es necesario... */
+}
 
 
 </style>

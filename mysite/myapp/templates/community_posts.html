@@ -16,7 +16,6 @@
 {% block content %}
 
 <br>
-<br>
 
 
 <div class="center-content">
@@ -24,8 +23,8 @@
         <a href="{% url 'create_post' community.id %}">Create Post</a>
     </div>
 </div>
-<br>
-<br>
+
+
 
 
 
@@ -35,8 +34,8 @@
 
     {% if post_count > 0 %}
     <div class="ordenamiento">
-        <a href="?order=-published_at" class="btn {% if request.GET.order == '-published_at' or request.GET.order == None %}selected{% endif %}">New Comments</a>
-        <a href="?order=-likes_count" class="btn {% if request.GET.order == '-likes_count' %}selected{% endif %}">Popular Comments</a>
+        <a href="?order=-published_at" class="btn {% if request.GET.order == '-published_at' or request.GET.order == None %}selected{% endif %}">New Posts</a>
+        <a href="?order=-likes_count" class="btn {% if request.GET.order == '-likes_count' %}selected{% endif %}">Popular Posts</a>
         
     </div>
     {% endif %}
@@ -59,22 +58,25 @@
                 <h3 id="post-title-{{ post.id }}">{{ post.title }}</h3>
                 
                 {% if post.media_file %}
-                    {% if post.media_file.url|lower|endswith:".mp4" or post.media_file.url|lower|endswith:".webm" %}
-                        <video controls id="post-file-{{ post.id }}">
-                            <source src="{{ post.media_file.url }}" type="video/mp4">
-                            Your browser does not support the video tag.
-                        </video>
-                    {% else %}
-                        <img src="{{ post.media_file.url }}" alt="Media file" class="media-thumbnail" id="post-file-{{ post.id }}">
-                    {% endif %}
+            <div class="media-container"> <!-- Añadido contenedor para el archivo multimedia -->
+                {% if post.media_file.url|lower|endswith:".mp4" or post.media_file.url|lower|endswith:".webm" %}
+                    <video controls id="post-file-{{ post.id }}">
+                        <source src="{{ post.media_file.url }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                {% else %}
+                    <img src="{{ post.media_file.url }}" alt="Media file" class="media-thumbnail" id="post-file-{{ post.id }}">
                 {% endif %}
+            </div>
+        {% endif %}
                 
-                <p id="post-content-{{ post.id }}"> {{ post.content|linebreaks }} </p>
+                <p id="post-content-{{ post.id }}">{{ post.content|truncatechars:400|linebreaks }}</p>
             </a>
         </div>
 
         <div class="post-separator"></div>
             <div class="post-actions">
+                <a href="{% url 'post_detail' post.id %}" class="comment-button">Comment</a>
                 <p class="comment-count">{{ post.comments.count }} Comment{{ post.comments.count|pluralize }}</p>
         <!-- Botón de Like -->
                     <a href="#" data-post-id="{{ post.id }}" class="like-button post-like-button">
@@ -393,7 +395,14 @@ $(document).on('submit', '#edit-post-form', function(e) {
 
 <style>
 
+.media-container {
+    display: flex;
+    justify-content: center;
+}
 
+.content-text {
+    text-align: left;
+}
 
     .ordenamiento a.btn {
         display: inline-block;
@@ -640,7 +649,9 @@ $(document).on('submit', '#edit-post-form', function(e) {
     }
     
     .centrar-contenido .post {
-        background-color: #808080; 
+        background-color: rgb(39, 39, 39); /* Fondo oscuro */
+        color: white;
+
         padding: 20px;
         border: 1px solid white; 
         border-radius: 5px; 
@@ -707,7 +718,7 @@ $(document).on('submit', '#edit-post-form', function(e) {
         display: flex;
         flex-direction: column;
         gap: 5px;
-        background-color: #808080; 
+        background-color: rgb(39, 39, 39);
         border: 1px solid #ccc;
         padding: 10px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
@@ -749,6 +760,36 @@ $(document).on('submit', '#edit-post-form', function(e) {
         z-index: 1000;  /* para asegurarse de que aparezca en la parte superior*/
     }
     
+    .post-actions {
+    display: flex;
+    justify-content: space-around; /* Distribución uniforme alrededor de los elementos */
+    align-items: center; /* Alineación vertical */
+    padding: 0 20px; /* Padding en los lados */
+    gap: 22px;
+}
+
+
+.post-actions .comment-button {
+    display: inline-flex; /* Asegura que se comporte como un botón */
+    align-items: center; /* Centra el texto verticalmente */
+    justify-content: center; /* Centra el texto horizontalmente */
+    padding: 10px 20px; /* Espaciado interno */
+    background-color: rgb(234, 216, 127); /* Color de fondo */
+    color: #000; /* Color del texto */
+    text-decoration: none; /* Elimina el subrayado del enlace */
+    border: 1px solid white; /* Borde del botón */
+    border-radius: 0; /* Bordes redondeados */
+    cursor: pointer; /* Cambia el cursor a la forma de mano */
+    transition: background-color 0.2s, color 0.2s; /* Efecto suave al cambiar de estado */
+    margin-right: 10px; /* Margen derecho para separarlo de otros elementos */
+}
+
+.post-actions .comment-button:hover {
+    background-color: rgb(234, 127, 127); /* Color de fondo al pasar el ratón */
+    color: white; /* Cambio de color del texto al pasar el ratón */
+}
+
+
     
     </style>
     

@@ -96,7 +96,7 @@
       /* Espacio entre el ícono y el botón */
     
 
-    .email {
+    .owusername {
         font-style: italic;
         font-weight: 300;
         color: gray;
@@ -121,7 +121,7 @@
 <div class="profile-container">
     <div class="banner">
         <div class="profile-image-big">
-            <img src="{% static 'myapp/images/default_profile_icon.png' %}" alt="Imagen de perfil">
+            <img src="{% if profile_user.userprofile.profile_picture %}{{ profile_user.userprofile.profile_picture.url }}{% else %}{% static 'myapp/images/default_profile_icon.png' %}{% endif %}" alt="Imagen de perfil">
         </div>
     </div>
 
@@ -129,26 +129,33 @@
 
         <div class="top-section">
             <!-- Sección izquierda - Username -->
-            <div class="username">Your chosen name</div>
+            <div class="username">{{ profile_user.first_name }} {{ profile_user.last_name }}</div>
+
             <!-- <div class="username">{{ profile_user.username }}</div> -->
             
             <!-- Sección derecha - Ícono y botón -->
             <div class="right-section">
-                <a href="#" class="icon-envelope"><i class="fas fa-envelope"></i></a>
+                <a href="{% url 'start_chat' username=profile_user.username %}" class="icon-envelope"><i class="fas fa-envelope"></i></a>
                 <a href="{% url 'edit_profile' username=user.username %}" class="btn">Edit Profile</a>
             </div>
         </div>
     
-        <!-- Otros detalles como el email y la biografía -->
+        <!-- Otros detalles como el  y la biografía -->
         <div class="details-section"></div>
-        <div class="email">@username</div>
+        <div class="owusername">@{{ profile_user.username }} </div>
 
             <!-- <div class="email">{{ profile_user.email }}</div> -->
             
             <!-- Texto ficticio para la biografía -->
-            <div class="bio">
-                {{ profile_user.biography|truncatechars:400|default:"While this app respects the choice of anonymity, we offer the added feature of a personal bio for those who wish to establish a more transparent presence—labs, doctors, medical centers, etc. We also offer a rigorous account verification process, adding an additional layer of trust and authenticity." }}
-            </div>
+            <div class="bio">{{ profile_user.userprofile.bio }}</div>
+
+            {% if profile_user.userprofile.personal_link %}
+                <div>
+                    <i class="fas fa-link"></i> <a href="{{ profile_user.userprofile.personal_link }}" target="_blank">{{ profile_user.userprofile.personal_link }}</a>
+                </div>
+            {% endif %}
+</div>
+                
         </div>
     
     </div>
@@ -186,57 +193,5 @@
     <div class="results-container" id="saved-results">
         {% include 'profile-saved.html' %}
     </div>
-    
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        let buttons = document.querySelectorAll('.community-button');
-        let highlight = document.querySelector('.highlight-line');
-        
-        buttons.forEach(function(button) {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-        
-                // Mover la línea de resaltado
-                let buttonRect = button.getBoundingClientRect();
-                let containerRect = highlight.parentElement.getBoundingClientRect();
-                highlight.style.left = (buttonRect.left - containerRect.left + window.pageXOffset) + "px";
-        
-                // Si el botón pulsado es "Saved", hacemos una solicitud AJAX
-                if (button.dataset.btn === 'saved') {
-                    $.ajax({
-                        url: '{% url "saved_content" username=profile_user.username %}', // Asume que tienes una variable `profile_user` en el contexto
-                        method: 'GET',
-                        success: function(data) {
-                            document.getElementById('saved-results').innerHTML = data;
-                            showResults('saved-results');
-                        },
-                        error: function(err) {
-                            console.error("Error al cargar el contenido guardado:", err);
-                        }
-                    });
-                } else {
-                    // Si no es el botón "Saved", simplemente mostramos el contenedor correspondiente
-                    showResults(button.dataset.btn + '-results');
-                }
-            });
-        });
-        
-        // Mostrar resultados de 'posts' por defecto al cargar la página
-        showResults('posts-results');
-    });
-    
-    function showResults(resultType) {
-        console.log("Mostrando resultados para:", resultType);  // línea para depuración
-        
-        // Oculta todos los contenedores de resultados
-        let allResults = document.querySelectorAll('.results-container');
-        allResults.forEach(result => result.style.display = 'none');
-        
-        // Muestra el contenedor de resultados específico
-        document.getElementById(resultType).style.display = 'block';
-    }
-    
-</script>
 
 {% endblock %}
