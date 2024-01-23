@@ -40,7 +40,7 @@ DEBUG = 'True'
 
 # remplazar "True" con lo siguiente para subirlo = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['127.0.0.1', '.vercel.app', 'simonzarama.pythonanywhere.com']
+ALLOWED_HOSTS = ['127.0.0.1', 'simonzarama.pythonanywhere.com']
 
 # Solo para desarrollo, no usar en producción
 CSRF_TRUSTED_ORIGINS = [
