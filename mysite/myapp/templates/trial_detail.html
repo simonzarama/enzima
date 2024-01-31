@@ -439,13 +439,13 @@ form.comment-form button {
                             <img src="{{ trial.media_file.url }}" alt="{{ trial.title }}">
                         {% endif %}
                     </div>
-                    <p id="trial-description">{{ trial.description|linebreaks }}</p>
+                    <p id="trial-description">{{ trial.description|safe |linebreaks }}</p>
                     <br>
                     <br>
     
                     <span>Participation Criteria: </span>
                     {% if trial.participation_criteria %}
-                        <p>{{ trial.participation_criteria }}</p>
+                        <p>{{ trial.participation_criteria|safe  }}</p>
                     {% else %}
                         <p>None</p>
                     {% endif %}
@@ -557,7 +557,7 @@ form.comment-form button {
                             <p>Are you interested in applying for this trial?</p> {{ form.wants_to_apply }}
                             <div id="participationCriteriaSection" style="display: none;">
                                 <h4>Participation Criteria</h4>
-                                <p>{{ trial.participation_criteria }}</p>
+                                <p>{{ trial.participation_criteria |safe }}</p>
                                 <div class="flex-container">
                                     <p>Do you meet the requirements for this trial?</p>
                                     {{ form.meets_requirements }}

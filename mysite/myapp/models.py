@@ -222,17 +222,18 @@ class ResourceLike(models.Model):
 
 
 
-
+from ckeditor.fields import RichTextField
 #RETOMANDO DESPUÉS DEL BREAK
 
 
 
 class Trial(models.Model):
     title = models.CharField(max_length=200, unique=True)
-    description = models.TextField(blank=True)
+    description = RichTextField(blank=True)
     media_file = models.FileField(upload_to='trials/', blank=True)
     published_at = models.DateTimeField(default=timezone.now)
-    participation_criteria = models.TextField(blank=True, null=True)  # Nuevo campo para los criterios de participación
+    participation_criteria = RichTextField(blank=True, null=True)
+  # Nuevo campo para los criterios de participación
     interaction_count = models.PositiveIntegerField(default=0) 
 
     administrators = models.ManyToManyField(User, related_name='administered_trials', blank=True)

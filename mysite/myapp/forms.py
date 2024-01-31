@@ -97,21 +97,15 @@ class TrialForm(forms.ModelForm):
         model = Trial
         fields = ['title', 'description', 'media_file', 'include_crowdfunding', 'goal', 'medical_supervisor', 'communities', 'administrators', 'participation_criteria'] 
         widgets = {
-            'description': forms.Textarea(attrs={
-                'placeholder': 'Tell us about your trial and what you\'re looking for. If you want to crowdfund this trial, explain how you plan to use the money.'
-            }),
             'administrators': autocomplete.ModelSelect2Multiple(url='user-autocomplete'),  # URL de la vista de autocompletado para administradores
             'medical_supervisor': autocomplete.ModelSelect2(url='user-autocomplete'),  # URL de la vista de autocompletado para supervisor médico
             'communities': autocomplete.ModelSelect2Multiple(url='community-autocomplete'),  # Asume que tienes una vista de autocompletado para comunidades
-            # Agrega aquí más widgets si necesitas personalizar la forma en que se muestran los campos
             'goal': forms.NumberInput(attrs={
                 'step': '0.01',  # Permite valores decimales hasta dos dígitos
                 'type': 'number',  # Asegura que sea un campo numérico
             }),
-            'participation_criteria': forms.Textarea(attrs={
-            'placeholder': 'Describe the criteria for participation in this trial.'
-        }),  # Widget para 'participation_criteria'
-    }
+            # Elimina las entradas para 'description' y 'participation_criteria'
+        }
             
 
 
