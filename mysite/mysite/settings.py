@@ -36,11 +36,11 @@ PAYPAL_TEST = True  # True para sandbox, False para producción
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = 'True'
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # remplazar "True" con lo siguiente para subirlo = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['127.0.0.1', 'simonzarama.pythonanywhere.com']
+ALLOWED_HOSTS = ['127.0.0.1', 'enzima.pythonanywhere.com']
 
 # Solo para desarrollo, no usar en producción
 CSRF_TRUSTED_ORIGINS = [
