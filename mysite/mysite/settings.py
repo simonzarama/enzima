@@ -40,19 +40,30 @@ DEBUG = 'True'
 
 # remplazar "True" con lo siguiente para subirlo = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['127.0.0.1', 'simonzarama.pythonanywhere.com']
+ALLOWED_HOSTS = ['127.0.0.1', 'simonzarama.pythonanywhere.com', 'enzima.pythonanywhere.com']
 
 # Solo para desarrollo, no usar en producción
 CSRF_TRUSTED_ORIGINS = [
     'https://501e-186-154-39-107.ngrok-free.app'  # Asegúrate de que no haya un espacio al final aquí
 ]
 
-
-
-
+CKEDITOR_CONFIGS = {
+    'default': {
+        'toolbar': [
+            ['Bold', 'Italic', 'Underline'],
+            ['Link', 'Unlink'],
+            ['NumberedList', 'BulletedList'],
+            ['JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock'],  # Añadir opciones de alineación
+            ['RemoveFormat', 'Source']
+        ],
+        'height': 300,
+        # Otras configuraciones que puedas necesitar...
+    },
+}
 # Application definition
 
 INSTALLED_APPS = [
+    'ckeditor',
     'paypal.standard.ipn',
     'dal',
     'dal_select2',

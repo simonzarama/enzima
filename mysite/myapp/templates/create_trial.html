@@ -30,6 +30,7 @@
 
     .form-content div {
         margin-bottom: 15px; /* Espacio entre los campos */
+        width: 100%;
     }
 
     .form-content label {
@@ -39,6 +40,10 @@
     .form-content select, .form-content input[type='text'], .form-content textarea {
         width: 60%;  /* Ancho para cubrir el contenedor */
         color: black; /* Color del texto dentro de los campos */
+    }
+    .cke_chrome {
+        border: none;
+
     }
 
     .trial-edit-container textarea {
@@ -109,6 +114,10 @@ input[type='number']::-webkit-inner-spin-button,
         color: black; /* Cambia el color del texto seleccionado a negro */
     }
 
+
+    .ckeditor-full-width {
+    width: 100%;
+}
 </style>
 <br>
 <br>
@@ -278,6 +287,14 @@ input[type='number']::-webkit-inner-spin-button,
             reader.readAsDataURL(file);
         }
     });
+
+
+    $(document).ready(function() {
+    // Agrega la clase a los contenedores de CKEditor
+    $('.ckeditor').each(function () {
+        $(this).next('.cke').addClass('ckeditor-full-width');
+    });
+});
 </script>
 
 

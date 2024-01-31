@@ -48,7 +48,7 @@
             <a href="{% url 'view_trial_detail' trial.id %}" class="hc-post-link">
                 <h3 id="hc-trial-title-{{ trial.id }}">{{ trial.title }}</h3>
                 <br>
-                <p>{{ trial.description|truncatechars:360 }}</p>
+                <p>{{ trial.description|safe |truncatechars:360 }}</p>
 
                 <!-- Archivo multimedia -->
                 {% if trial.media_file %}

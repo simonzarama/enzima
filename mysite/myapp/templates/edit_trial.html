@@ -48,17 +48,31 @@
         text-align: left; /* Alinear el contenido del formulario a la izquierda */
     }
 
-    .trial-edit-container textarea {
-        width: 760px;  /* Ancho específico para los textareas */
-        height: 150px; /* Altura ajustable según tus necesidades */
-        color: black; /* Color del texto dentro del textarea */
-        background-color: white; /* Fondo blanco para mayor legibilidad */
-        border: 1px solid #ccc; /* Borde sutil para el textarea */
-        border-radius: 4px; /* Bordes redondeados */
-        padding: 10px; /* Espaciado interior */
-        margin-top: 10px; /* Espacio encima del textarea */
-    }
 
+
+    .trial-edit-container textarea {
+    width: 100%;  /* Ancho relativo para ocupar todo el contenedor */
+    height: 150px; /* Altura ajustable según tus necesidades */
+    color: black; /* Color del texto dentro del textarea */
+    background-color: white; /* Fondo blanco para mayor legibilidad */
+    border: 1px solid #ccc; /* Borde sutil para el textarea */
+    border-radius: 4px; /* Bordes redondeados */
+    padding: 10px; /* Espaciado interior */
+    margin-top: 10px; /* Espacio encima del textarea */
+    box-sizing: border-box; /* Incluye padding y borde en el ancho total */
+}
+
+
+.cke_id_participation_criteria {
+    width: calc(100% - 40px); /* Ajusta esto según el padding total de tu contenedor */
+    box-sizing: border-box; /* Incluye el padding y los bordes en el ancho */
+}
+
+/* Si necesitas ajustar los estilos dentro del iframe de CKEditor */
+.cke_contents {
+    width: 760px;
+    height: 300px; /* Ajusta esto según tus necesidades */
+}
     /* Estilos adicionales según sea necesario */
 </style>
 {% endblock content %}
