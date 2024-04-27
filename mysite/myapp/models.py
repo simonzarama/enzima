@@ -78,7 +78,9 @@ class Post(models.Model):
         return self.title
 
     def is_liked_by(self, user):
-        return self.like_set.filter(user=user).exists()
+        if user.is_authenticated:
+            return self.like_set.filter(user=user).exists()
+        return False
 
 
 class Like(models.Model):
@@ -135,12 +137,9 @@ class CrowdfundingCampaign(models.Model):
     # ... otros campos ...
 
     def is_liked_by(self, user):
-        """
-        Verifica si un usuario ha dado 'like' a la campaña.
-        :param user: User instance.
-        :return: Boolean indicating whether the user liked the campaign.
-        """
-        return self.likers.filter(id=user.id).exists()
+        if user.is_authenticated:
+            return self.likers.filter(id=user.id).exists()
+        return False
 
     def get_absolute_url(self):
         """

@@ -107,7 +107,7 @@ def login_view(request):
 from django.contrib.contenttypes.models import ContentType
 
 
-@login_required
+
 def home(request):
     resources = Resource.objects.all()
     campaigns = CrowdfundingCampaign.objects.all()
@@ -203,10 +203,11 @@ def view_community(request, community_name):
     
     # Agregar el estado de "like" a cada post
     for post in posts:
-        post.is_liked = post.is_liked_by(request.user)
+        post.is_liked = request.user.is_authenticated and post.is_liked_by(request.user)
 
     for campaign in campaigns:
-        campaign.is_liked = campaign.is_liked_by(request.user)
+        campaign.is_liked = request.user.is_authenticated and campaign.is_liked_by(request.user)
+        campaign.likes_count = campaign.likers.count()
         # Asumiendo que tienes un método para obtener el recuento de likes en el modelo Campaign
         campaign.likes_count = campaign.likers.count()
     
@@ -412,7 +413,7 @@ class DeletePostView(View):
 
 def post_detail(request, post_id):
     post = get_object_or_404(Post, id=post_id)
-    is_liked = post.is_liked_by(request.user)  # Verifica si el usuario ha dado 'like' al post
+    is_liked = request.user.is_authenticated and post.is_liked_by(request.user)  # Verifica si el usuario ha dado 'like' al post
     context = {
         'post': post,
         'is_liked': is_liked,  # Agrega 'is_liked' al contexto
@@ -605,7 +606,7 @@ def view_campaign_detail(request, campaign_id):
 
         # Actualiza el estado de 'like' para cada campaña
     
-    campaign.is_liked = campaign.is_liked_by(request.user)
+    campaign.is_liked = request.user.is_authenticated and campaign.is_liked_by(request.user)
     print(f"Campaign ID: {campaign.id}, Is Liked: {campaign.is_liked}") 
 
     # Verificar si el contenido está guardado para el usuario actual
@@ -772,15 +773,19 @@ def community_posts(request, community_name):
     posts = Post.objects.filter(community=community).order_by(order)
     
     # Agregar el estado de "like" a cada post
-    for post in posts:
-        post.is_liked = post.is_liked_by(request.user)
-    
-    # Obtener el recuento de posts
-    post_count = posts.count()
+    if request.user.is_authenticated:
+    # Agregar el estado de "like" a cada post
+        for post in posts:
+            post.is_liked = post.is_liked_by(request.user)
 
-    # Obtener los IDs de los posts guardados por el usuario
-    content_type_post = ContentType.objects.get_for_model(Post)
-    saved_post_ids = SavedContent.objects.filter(user=request.user, content_type=content_type_post).values_list('object_id', flat=True)
+        # Obtener los IDs de los posts guardados por el usuario
+        content_type_post = ContentType.objects.get_for_model(Post)
+        saved_post_ids = SavedContent.objects.filter(user=request.user, content_type=content_type_post).values_list('object_id', flat=True)
+    else:
+        for post in posts:
+            post.is_liked = False
+        saved_post_ids = []
+    post_count = posts.count()
 
     return render(request, 'community_posts.html', {
         'community': community,
@@ -794,7 +799,7 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib.contenttypes.models import ContentType
 
 
-@login_required
+
 def community_resources(request, community_name):
     community = get_object_or_404(Community, name=community_name)
     resources = Resource.objects.filter(tags=community)
@@ -822,7 +827,7 @@ def community_resources(request, community_name):
 
 from django.contrib.contenttypes.models import ContentType
 
-@login_required
+
 def all_resources(request):
     resources = Resource.objects.all()
     content_type_resource = ContentType.objects.get_for_model(Resource)
@@ -844,7 +849,7 @@ def all_resources(request):
 
 # Obtener los IDs de los Trials guardados por el usuario actualAAAAAAAAAAAAAAAAAAAAAAAAAA
 
-@login_required
+
 def all_trials(request):
     # Obtener el parámetro 'order' de la URL, con un valor predeterminado
     order = request.GET.get('order', '-published_at')
@@ -858,16 +863,20 @@ def all_trials(request):
     trials = Trial.objects.order_by(order)
 
     content_type_trial = ContentType.objects.get_for_model(Trial)
-    
-    # Obtener los IDs de los Trials guardados por el usuario actual
-    saved_trial_ids = SavedContent.objects.filter(
-        user=request.user, 
-        content_type=content_type_trial
-    ).values_list('object_id', flat=True)
 
-    # Actualizar el estado de 'guardado' para cada Trial
-    for trial in trials:
-        trial.is_saved = trial.id in saved_trial_ids
+    # Obtener los IDs de los Trials guardados por el usuario actual
+    if request.user.is_authenticated:
+        saved_trial_ids = SavedContent.objects.filter(
+            user=request.user,
+            content_type=content_type_trial
+        ).values_list('object_id', flat=True)
+
+        for trial in trials:
+            trial.is_saved = trial.id in saved_trial_ids
+    else:
+        saved_trial_ids = []  # Inicializar saved_trial_ids como una lista vacía
+        for trial in trials:
+            trial.is_saved = False
 
     return render(request, 'trials.html', {
         'trials': trials,
@@ -876,23 +885,26 @@ def all_trials(request):
 
 # Obtener los IDs de los Trials guardados por el usuario actualAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
-@login_required
+
 def all_crowdfunding(request):
     campaigns = CrowdfundingCampaign.objects.all()
     content_type_campaign = ContentType.objects.get_for_model(CrowdfundingCampaign)
     
-    saved_campaign_ids = SavedContent.objects.filter(
-        user=request.user, 
-        content_type=content_type_campaign
-    ).values_list('object_id', flat=True)
+    if request.user.is_authenticated:
+        saved_campaign_ids = SavedContent.objects.filter(
+            user=request.user, 
+            content_type=content_type_campaign
+        ).values_list('object_id', flat=True)
 
+        liked_campaign_ids = set(CampaignLike.objects.filter(user=request.user).values_list('campaign_id', flat=True))
 
-    liked_campaign_ids = set(CampaignLike.objects.filter(user=request.user).values_list('campaign_id', flat=True))
-
-        # Actualiza el estado de 'like' para cada campaña
-    for campaign in campaigns:
-        campaign.is_liked = campaign.is_liked_by(request.user)
-        print(f"Campaign ID: {campaign.id}, Is Liked: {campaign.is_liked}") 
+        for campaign in campaigns:
+            campaign.is_liked = campaign.is_liked_by(request.user)
+            campaign.is_saved = campaign.id in saved_campaign_ids
+    else:
+        for campaign in campaigns:
+            campaign.is_liked = False
+            campaign.is_saved = False
     
     for campaign in campaigns:
         campaign.is_saved = campaign.id in saved_campaign_ids
@@ -914,7 +926,8 @@ def all_crowdfunding(request):
 
 from django.contrib.contenttypes.models import ContentType
 
-@login_required
+
+
 def community_trials(request, community_name):
     # Obtener la comunidad por su nombre
     community = get_object_or_404(Community, name=community_name)
@@ -943,10 +956,14 @@ def community_trials(request, community_name):
     content_type_trial = ContentType.objects.get_for_model(Trial)
 
     # Obtener los IDs de los Trials guardados por el usuario
-    saved_trial_ids = SavedContent.objects.filter(
-        user=request.user, 
-        content_type=content_type_trial
-    ).values_list('object_id', flat=True)
+    if request.user.is_authenticated:
+    # Obtener los IDs de los Trials guardados por el usuario
+        saved_trial_ids = SavedContent.objects.filter(
+            user=request.user, 
+            content_type=content_type_trial
+        ).values_list('object_id', flat=True)
+    else:
+        saved_trial_ids = []
 
     # Renderizar la plantilla con los datos necesarios
     return render(request, 'community_trials.html', {
@@ -1319,33 +1336,42 @@ class CommunityAutocomplete(autocomplete.Select2QuerySetView):
 from .models import Trial, Application
 from .forms import ApplicationForm  # Asegúrate de haber creado este formulario
 
-@login_required
 def trial_detail(request, id):
     trial = get_object_or_404(Trial, pk=id)
-    is_administrator = request.user in trial.administrators.all()
-    already_applied = Application.objects.filter(trial=trial, user=request.user, wants_to_apply=True).exists()
+
+    if request.user.is_authenticated:
+        is_administrator = request.user in trial.administrators.all()
+        already_applied = Application.objects.filter(trial=trial, user=request.user, wants_to_apply=True).exists()
+    else:
+        is_administrator = False
+        already_applied = False
 
     form = ApplicationForm()
 
     if request.method == 'POST':
-        form = ApplicationForm(request.POST)
-        if form.is_valid():
-            application = form.save(commit=False)
-            application.trial = trial
-            application.user = request.user
-            if not application.wants_to_apply:
-                application.meets_requirements = False
-            application.save()
+        if request.user.is_authenticated:
+            form = ApplicationForm(request.POST)
+            if form.is_valid():
+                application = form.save(commit=False)
+                application.trial = trial
+                application.user = request.user
+                if not application.wants_to_apply:
+                    application.meets_requirements = False
+                application.save()
 
-            # Notificar a los administradores de cualquier nueva aplicación
-            for admin in trial.administrators.all():
-                Notification.objects.create(
-                    user=admin,
-                    message=f"New message for {trial.title} by {request.user.username}.",
-                    trial=trial 
-                )
+                # Notificar a los administradores de cualquier nueva aplicación
+                for admin in trial.administrators.all():
+                    Notification.objects.create(
+                        user=admin,
+                        message=f"New message for {trial.title} by {request.user.username}.",
+                        trial=trial
+                    )
 
-            return redirect('view_trial_detail', id=id)
+                return redirect('view_trial_detail', id=id)
+        else:
+            # Manejar el caso de usuarios no autenticados que intenten enviar una solicitud
+            # Puedes redirigirlos a la página de inicio de sesión o mostrar un mensaje de error
+            return redirect('login')  # Reemplaza 'login' con el nombre de tu URL de inicio de sesión
 
     # Obtener las aplicaciones relacionadas con este ensayo, ordenadas por fecha de creación
     applications = Application.objects.filter(trial=trial).order_by('-created_at')
@@ -1355,12 +1381,10 @@ def trial_detail(request, id):
         'is_administrator': is_administrator,
         'form': form,
         'already_applied': already_applied,
-        'applications': applications  # Añadir las aplicaciones al contexto
+        'applications': applications
     }
+
     return render(request, 'trial_detail.html', context)
-
-
-
 class AddTrialCommentView(View):
     def post(self, request, trial_id):
         trial = get_object_or_404(Trial, id=trial_id)
